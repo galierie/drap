@@ -14,21 +14,25 @@
   const { draftId, round, lab }: Props = $props();
 </script>
 
-<div class="flex h-12 w-full items-center justify-between border-b pb-1 last:border-0">
-  {#if lab.quota === 0}
-    <h5 class="text-lg font-medium text-muted-foreground">{lab.name}</h5>
-  {:else}
-    <div class="flex items-center gap-1">
-      <h5 class="text-lg font-medium">{lab.name}</h5>
+<div class="flex flex-col text-left items-left w-full lg:flex-row lg:justify-between border-b px-1 py-2 last:border-0">
+  <div class="flex flex-col gap-2 overflow-auto lg:flex-row">
+    {#if lab.quota !== 0}
       <Badge
         variant="outline"
         class="h-fit border-warning bg-warning/10 font-mono text-xs uppercase"
       >
         {lab.quota} maximum
       </Badge>
+    {/if}
+    <div class="whitespace-nowrap h-8 flex items-left gap-1 overflow-auto">
+      {#if lab.quota === 0}
+        <h5 class="text-lg font-medium text-muted-foreground">{lab.name}</h5>
+      {:else}
+        <h5 class="text-lg font-medium">{lab.name}</h5>
+      {/if}
     </div>
-  {/if}
-  <div class="flex items-center gap-1">
+  </div>
+  <div class="flex items-left sm:items-end gap-1">
     <!-- Members -->
     <DraftedDraftees {draftId} {lab} />
     <!-- Preferred -->
