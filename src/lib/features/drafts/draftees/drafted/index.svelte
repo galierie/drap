@@ -18,7 +18,7 @@
         <Button
           variant="outline"
           class="h-fit border-primary bg-primary/10 font-mono text-xs uppercase"
-          {...props}>See Members</Button
+          {...props}>Members</Button
         >
       {/if}
     {/snippet}

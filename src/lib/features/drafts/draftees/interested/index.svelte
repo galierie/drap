@@ -15,7 +15,7 @@
         class="h-fit border-secondary bg-secondary/10 font-mono text-xs uppercase"
         {...props}
       >
-        See Interested
+        Interested
       </Button>
     {/snippet}
   </Drawer.Trigger>

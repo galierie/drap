@@ -27,7 +27,7 @@
       case 'pending-selection':
         return 'Pending Selection';
       case 'see-preferred':
-        return 'See Preferred';
+        return 'Preferred';
       default:
         throw new Error('unreachable');
     }
