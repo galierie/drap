@@ -100,9 +100,8 @@ export async function load({ params, locals: { session } }) {
       error(404);
     }
 
-    const [studentCount, records, assignments, quotaSnapshots, allowlistCount] = await Promise.all([
+    const [studentCount, assignments, quotaSnapshots, allowlistCount] = await Promise.all([
       getStudentCountInDraft(db, draftId),
-      getFacultyChoiceRecords(db, draftId),
       getDraftAssignmentRecords(db, draftId),
       getDraftLabQuotaSnapshots(db, draftId),
       getAllowlistCountByDraft(db, draftId),
@@ -145,7 +144,6 @@ export async function load({ params, locals: { session } }) {
       draft: { id: draftId, ...draft },
       labs,
       studentCount,
-      records,
       finalized: {
         quota: {
           initialQuota,
