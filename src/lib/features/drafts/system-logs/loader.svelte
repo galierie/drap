@@ -22,5 +22,5 @@
 {:else if query.isError}
   <Empty>Uh oh! An error has occurred.</Empty>
 {:else}
-  <DataDisplay data={query.data} />
+  <DataDisplay {draftId} data={query.data} />
 {/if}
