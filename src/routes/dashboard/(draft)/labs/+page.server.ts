@@ -102,9 +102,13 @@ export const actions = {
             });
             error(403, 'Invalid draft.');
           }
-          const draft =
-            clientDraftId === null ? null : await getDraftByIdForShare(db, clientDraftId);
-          if (typeof draft !== 'undefined' && draft !== null && draft.currRound === 0) {
+          if (clientDraftId !== null) {
+            const draft = await getDraftByIdForShare(db, clientDraftId);
+            if (typeof draft !== 'undefined' && draft.currRound === 0) {
+              logger.fatal('cannot mutate lab catalog during registration');
+              error(403, 'Cannot modify labs while draft registration is ongoing.');
+            }
+          } else if (typeof activeDraft !== 'undefined' && activeDraft.currRound === 0) {
             logger.fatal('cannot mutate lab catalog during registration');
             error(403, 'Cannot modify labs while draft registration is ongoing.');
           }
@@ -148,9 +152,13 @@ export const actions = {
             });
             error(403, 'Invalid draft.');
           }
-          const draft =
-            clientDraftId === null ? null : await getDraftByIdForShare(db, clientDraftId);
-          if (typeof draft !== 'undefined' && draft !== null && draft.currRound === 0) {
+          if (clientDraftId !== null) {
+            const draft = await getDraftByIdForShare(db, clientDraftId);
+            if (typeof draft !== 'undefined' && draft.currRound === 0) {
+              logger.fatal('cannot mutate lab catalog during registration');
+              error(403, 'Cannot modify labs while draft registration is ongoing.');
+            }
+          } else if (typeof activeDraft !== 'undefined' && activeDraft.currRound === 0) {
             logger.fatal('cannot mutate lab catalog during registration');
             error(403, 'Cannot modify labs while draft registration is ongoing.');
           }
@@ -194,9 +202,13 @@ export const actions = {
             });
             error(403, 'Invalid draft.');
           }
-          const draft =
-            clientDraftId === null ? null : await getDraftByIdForShare(db, clientDraftId);
-          if (typeof draft !== 'undefined' && draft !== null && draft.currRound === 0) {
+          if (clientDraftId !== null) {
+            const draft = await getDraftByIdForShare(db, clientDraftId);
+            if (typeof draft !== 'undefined' && draft.currRound === 0) {
+              logger.fatal('cannot mutate lab catalog during registration');
+              error(403, 'Cannot modify labs while draft registration is ongoing.');
+            }
+          } else if (typeof activeDraft !== 'undefined' && activeDraft.currRound === 0) {
             logger.fatal('cannot mutate lab catalog during registration');
             error(403, 'Cannot modify labs while draft registration is ongoing.');
           }
