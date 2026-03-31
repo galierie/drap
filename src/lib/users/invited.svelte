@@ -53,7 +53,7 @@
   <div class="flex shrink-0 items-center gap-2">
     <form
       method="POST"
-      action="?/deleteInvite"
+      action="/dashboard/users/?/deleteInvite"
       use:enhance={({ cancel }) => {
         // eslint-disable-next-line no-alert
         if (!confirm('Are you sure you want to delete this invitation?')) {

@@ -13,7 +13,7 @@ const tracer = Tracer.byName(SERVICE_NAME);
 
 export async function GET({ locals: { session }, url }) {
   if (typeof session?.user === 'undefined') {
-    logger.error('attempt to access invited users without session');
+    logger.fatal('attempt to access invited users without session');
     error(401);
   }
 
@@ -38,7 +38,10 @@ export async function GET({ locals: { session }, url }) {
     });
 
     const parsed = v.safeParse(FetchInvitedUsersParams, Object.fromEntries(url.searchParams));
-    if (!parsed.success) error(400);
+    if (!parsed.success) {
+      logger.fatal('invalid invited users query params');
+      error(400);
+    }
 
     const { type } = parsed.output;
 
