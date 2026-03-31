@@ -57,11 +57,6 @@ export interface DraftFinalizedBreakdown {
     finalizedQuota: number;
   };
   snapshots: DraftLabQuotaSnapshot[];
-  sections: {
-    regularDrafted: DraftAssignmentRecord[];
-    interventionDrafted: DraftAssignmentRecord[];
-    lotteryDrafted: DraftAssignmentRecord[];
-  };
 }
 
 export interface DraftRegistrationAllowlistEntry extends Pick<

@@ -103,7 +103,6 @@ export async function load({ params, locals: { session } }) {
 
     const {
       studentCount,
-      assignments,
       quotaSnapshots,
       allowlistCount,
       lateRegistrantsCount,
@@ -112,7 +111,6 @@ export async function load({ params, locals: { session } }) {
       // Needs to be done sequentially because parallel queries in a transaction are not supported.
       async db => ({
         studentCount: await getStudentCountInDraft(db, draftId),
-        assignments: await getDraftAssignmentRecords(db, draftId),
         quotaSnapshots: await getDraftLabQuotaSnapshots(db, draftId),
         allowlistCount: await getAllowlistCountByDraft(db, draftId),
         lateRegistrantsCount: await getLateRegistrantsCountByDraft(db, draftId),
@@ -127,17 +125,6 @@ export async function load({ params, locals: { session } }) {
       quota: initialQuota,
     }));
 
-    type DraftAssignmentRecords = typeof assignments;
-    const regularDrafted: DraftAssignmentRecords = [];
-    const interventionDrafted: DraftAssignmentRecords = [];
-    const lotteryDrafted: DraftAssignmentRecords = [];
-
-    for (const assignment of assignments)
-      if (assignment.round === null) lotteryDrafted.push(assignment);
-      else if (assignment.round > 0 && assignment.round <= draft.maxRounds)
-        regularDrafted.push(assignment);
-      else if (assignment.round === draft.maxRounds + 1) interventionDrafted.push(assignment);
-
     let initialQuota = 0;
     let finalizedQuota = 0;
     for (const quota of quotaSnapshots) {
@@ -149,9 +136,6 @@ export async function load({ params, locals: { session } }) {
       'draft.id': draftId.toString(),
       'draft.round.current': draft.currRound,
       'draft.round.max': draft.maxRounds,
-      'draft.summary.regular_count': regularDrafted.length,
-      'draft.summary.intervention_count': interventionDrafted.length,
-      'draft.summary.lottery_count': lotteryDrafted.length,
     });
 
     return {
@@ -163,18 +147,12 @@ export async function load({ params, locals: { session } }) {
       finalized: {
         quota: {
           initialQuota,
-          lotteryInterventions: interventionDrafted.length,
           finalizedQuota,
         },
         snapshots: quotaSnapshots.map(row => ({
           ...row,
           finalizedQuota: row.initialQuota + row.lotteryQuota,
         })),
-        sections: {
-          regularDrafted,
-          interventionDrafted,
-          lotteryDrafted,
-        },
       },
       allowlistCount,
       lateRegistrantsCount,
