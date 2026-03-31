@@ -125,13 +125,6 @@ export async function load({ params, locals: { session } }) {
       quota: initialQuota,
     }));
 
-    let initialQuota = 0;
-    let finalizedQuota = 0;
-    for (const quota of quotaSnapshots) {
-      initialQuota += quota.initialQuota;
-      finalizedQuota += quota.initialQuota + quota.lotteryQuota;
-    }
-
     logger.debug('draft detail loaded', {
       'draft.id': draftId.toString(),
       'draft.round.current': draft.currRound,
@@ -145,10 +138,6 @@ export async function load({ params, locals: { session } }) {
       labs,
       studentCount,
       finalized: {
-        quota: {
-          initialQuota,
-          finalizedQuota,
-        },
         snapshots: quotaSnapshots.map(row => ({
           ...row,
           finalizedQuota: row.initialQuota + row.lotteryQuota,
