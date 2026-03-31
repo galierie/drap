@@ -64,7 +64,7 @@ function coerceNumber(value: unknown) {
   throw new CoercionError('expected a number');
 }
 
-const isRegistrationClosed = sql`${schema.draft.registrationClosesAt} < now()`
+const isRegistrationClosed = sql`${schema.draft.registrationClosedAt} < now()`
   .mapWith(Boolean)
   .as('is_registration_closed');
 
@@ -587,7 +587,7 @@ export async function getDrafts(db: DbConnection) {
         id: schema.draft.id,
         currRound: schema.draft.currRound,
         maxRounds: schema.draft.maxRounds,
-        registrationClosesAt: schema.draft.registrationClosesAt,
+        registrationClosedAt: schema.draft.registrationClosedAt,
         isRegistrationClosed,
         activePeriodStart: sql`lower(${schema.draft.activePeriod})`
           .mapWith(coerceDate)
@@ -608,7 +608,7 @@ export async function getDraftById(db: DbConnection, id: bigint) {
       .select({
         currRound: schema.draft.currRound,
         maxRounds: schema.draft.maxRounds,
-        registrationClosesAt: schema.draft.registrationClosesAt,
+        registrationClosedAt: schema.draft.registrationClosedAt,
         isRegistrationClosed,
         activePeriodStart: sql`lower(${schema.draft.activePeriod})`.mapWith(coerceDate),
         activePeriodEnd: sql`upper(${schema.draft.activePeriod})`.mapWith(coerceNullableDate),
@@ -626,7 +626,7 @@ export async function getDraftByIdForUpdate(db: DrizzleTransaction, id: bigint) 
       .select({
         currRound: schema.draft.currRound,
         maxRounds: schema.draft.maxRounds,
-        registrationClosesAt: schema.draft.registrationClosesAt,
+        registrationClosedAt: schema.draft.registrationClosedAt,
         isRegistrationClosed,
         activePeriodStart: sql`lower(${schema.draft.activePeriod})`.mapWith(coerceDate),
         activePeriodEnd: sql`upper(${schema.draft.activePeriod})`.mapWith(coerceNullableDate),
@@ -645,7 +645,7 @@ export async function getActiveDraft(db: DbConnection) {
         id: schema.draft.id,
         currRound: schema.draft.currRound,
         maxRounds: schema.draft.maxRounds,
-        registrationClosesAt: schema.draft.registrationClosesAt,
+        registrationClosedAt: schema.draft.registrationClosedAt,
         isRegistrationClosed,
         activePeriodStart: sql`lower(${schema.draft.activePeriod})`.mapWith(coerceDate),
         activePeriodEnd: sql`upper(${schema.draft.activePeriod})`.mapWith(coerceNullableDate),
@@ -670,7 +670,7 @@ export async function getDraftByIdForShare(db: DrizzleTransaction, id: bigint) {
       .select({
         currRound: schema.draft.currRound,
         maxRounds: schema.draft.maxRounds,
-        registrationClosesAt: schema.draft.registrationClosesAt,
+        registrationClosedAt: schema.draft.registrationClosedAt,
         isRegistrationClosed,
         activePeriodStart: sql`lower(${schema.draft.activePeriod})`.mapWith(coerceDate),
         activePeriodEnd: sql`upper(${schema.draft.activePeriod})`.mapWith(coerceNullableDate),
@@ -1204,7 +1204,7 @@ export async function validateStudentsChoseLabInRound(
 export async function initDraft(
   db: DrizzleTransaction,
   maxRounds: number,
-  registrationClosesAt: Date,
+  registrationClosedAt: Date,
 ) {
   return await tracer.asyncSpan('init-draft', async span => {
     span.setAttribute('database.draft.max_rounds', maxRounds);
@@ -1214,7 +1214,7 @@ export async function initDraft(
 
     const draft = await db
       .insert(schema.draft)
-      .values({ maxRounds, registrationClosesAt })
+      .values({ maxRounds, registrationClosedAt })
       .returning({
         id: schema.draft.id,
         activePeriodStart: sql`lower(${schema.draft.activePeriod})`.mapWith(coerceDate),
@@ -2250,7 +2250,7 @@ export async function getLateRegistrantsByDraft(db: DbConnection, draftId: bigin
       .where(
         and(
           eq(schema.studentRank.draftId, draftId),
-          sql`${schema.studentRank.createdAt} > ${schema.draft.registrationClosesAt}`,
+          sql`${schema.studentRank.createdAt} > ${schema.draft.registrationClosedAt}`,
         ),
       )
       .groupBy(schema.user.id, schema.facultyChoiceUser.labId)
@@ -2269,7 +2269,7 @@ export async function getLateRegistrantsCountByDraft(db: DbConnection, draftId: 
       .where(
         and(
           eq(schema.studentRank.draftId, draftId),
-          sql`${schema.draft.registrationClosesAt} < ${schema.studentRank.createdAt}`,
+          sql`${schema.draft.registrationClosedAt} < ${schema.studentRank.createdAt}`,
         ),
       )
       .then(assertSingle);
