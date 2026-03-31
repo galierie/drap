@@ -137,12 +137,10 @@ export async function load({ params, locals: { session } }) {
       requestedAt: new Date(),
       labs,
       studentCount,
-      finalized: {
-        snapshots: quotaSnapshots.map(row => ({
-          ...row,
-          finalizedQuota: row.initialQuota + row.lotteryQuota,
-        })),
-      },
+      snapshots: quotaSnapshots.map(row => ({
+        ...row,
+        finalizedQuota: row.initialQuota + row.lotteryQuota,
+      })),
       allowlistCount,
       lateRegistrantsCount,
       timelineData,

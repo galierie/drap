@@ -12,7 +12,7 @@
   import { Button } from '$lib/components/ui/button';
   import { createFetchDraftAssignmentsQuery } from '$lib/queries/fetch-draft-assignments';
   import { createFetchDrafteesQuery } from '$lib/queries/fetch-draftees';
-  import type { Draft, DraftFinalizedBreakdown, Lab } from '$lib/features/drafts/types';
+  import type { Draft, DraftLabQuotaSnapshot, Lab } from '$lib/features/drafts/types';
   import { Empty } from '$lib/components/ui/empty';
   import { resolve } from '$app/paths';
 
@@ -24,14 +24,12 @@
     draft: Pick<Draft, 'activePeriodStart' | 'activePeriodEnd' | 'maxRounds'>;
     totalStudents: number;
     labs: Lab[];
-    finalized: DraftFinalizedBreakdown;
+    snapshots: DraftLabQuotaSnapshot[];
     isReview: boolean;
   }
 
-  const { draftId, requestedAt, draft, totalStudents, labs, finalized, isReview }: Props = $props();
-  const participatingLabs = $derived(
-    finalized.snapshots.length > 0 ? finalized.snapshots.length : labs.length,
-  );
+  const { draftId, requestedAt, draft, totalStudents, labs, snapshots, isReview }: Props = $props();
+  const participatingLabs = $derived(snapshots.length > 0 ? snapshots.length : labs.length);
 
   const regularDraftedQuery = $derived(
     createFetchDraftAssignmentsQuery(draftId, assignments =>

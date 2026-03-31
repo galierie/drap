@@ -3,7 +3,7 @@
   import { format, lightFormat } from 'date-fns';
 
   import { Button } from '$lib/components/ui/button';
-  import type { Draft, DraftFinalizedBreakdown, Lab } from '$lib/features/drafts/types';
+  import type { Draft, DraftLabQuotaSnapshot, Lab } from '$lib/features/drafts/types';
   import { resolve } from '$app/paths';
 
   import Step, { type Status } from './step.svelte';
@@ -34,7 +34,7 @@
     draft: Draft;
     labs: Lab[];
     studentCount: number;
-    finalized: DraftFinalizedBreakdown;
+    snapshots: DraftLabQuotaSnapshot[];
     allowlistCount: number;
     lateRegistrantsCount: number;
     timelineData: TimelineData[];
@@ -46,7 +46,7 @@
     draft,
     labs,
     studentCount,
-    finalized,
+    snapshots,
     allowlistCount,
     lateRegistrantsCount,
     timelineData,
@@ -189,7 +189,7 @@
           {draft}
           totalStudents={studentCount}
           {labs}
-          {finalized}
+          {snapshots}
           isReview={currentPhase === 'review'}
         />
       </Step>
@@ -203,7 +203,7 @@
         defaultOpen={currentPhase === 'intervention' || currentPhase === 'review'}
       >
         {#if currentPhase === 'intervention'}
-          <LotteryActive {draftId} {labs} snapshots={finalized.snapshots} />
+          <LotteryActive {draftId} {labs} {snapshots} />
         {:else}
           <LotteryCompleted {draftId} isReview={currentPhase === 'review'} />
         {/if}
@@ -243,14 +243,9 @@
         <span class="text-sm text-muted-foreground">{studentCount} students</span>
       {/snippet}
       {#if currentPhase === 'registration'}
-        <RegistrationActive {draftId} {studentCount} snapshots={finalized.snapshots} />
+        <RegistrationActive {draftId} {studentCount} {snapshots} />
       {:else if currentPhase === 'registration-closed'}
-        <RegistrationClosed
-          {draftId}
-          {studentCount}
-          {allowlistCount}
-          snapshots={finalized.snapshots}
-        />
+        <RegistrationClosed {draftId} {studentCount} {allowlistCount} {snapshots} />
       {:else}
         <RegistrationCompleted
           {draftId}

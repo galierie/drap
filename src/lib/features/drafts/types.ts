@@ -50,10 +50,6 @@ export interface DraftAssignmentRecord extends Pick<
   assignedAt: schema.FacultyChoice['createdAt'] | null;
 }
 
-export interface DraftFinalizedBreakdown {
-  snapshots: DraftLabQuotaSnapshot[];
-}
-
 export interface DraftRegistrationAllowlistEntry extends Pick<
   schema.DraftRegistrationAllowlist,
   'draftId' | 'studentUserId' | 'createdAt' | 'adminUserId'
