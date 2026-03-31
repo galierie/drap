@@ -57,7 +57,6 @@
   <Sheet.Trigger>
     <Button variant="outline" class="gap-2">
       View All Draftees
-      <ChevronRightIcon class="size-4 rotate-90" />
     </Button>
   </Sheet.Trigger>
   <Sheet.Content side="right" class="w-[600px] sm:max-w-[600px]">
