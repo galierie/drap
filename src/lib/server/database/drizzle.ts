@@ -1253,6 +1253,18 @@ export async function incrementDraftRound(db: DbConnection, draftId: bigint) {
   });
 }
 
+export async function startDraft(db: DbConnection, draftId: bigint) {
+  return await tracer.asyncSpan('start-draft-round', async span => {
+    span.setAttribute('database.draft.id', draftId.toString());
+    return await db
+      .update(schema.draft)
+      .set({
+        startedAt: sql`now()`,
+      })
+      .where(eq(schema.draft.id, draftId))
+  });
+}
+
 export async function randomizeRemainingStudents(db: DbConnection, draftId: bigint) {
   return await tracer.asyncSpan('randomize-remaining-students', async span => {
     span.setAttribute('database.draft.id', draftId.toString());

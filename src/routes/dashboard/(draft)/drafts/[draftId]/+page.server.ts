@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 
 import * as v from 'valibot';
 import { decode } from 'decode-formdata';
+import { sql } from 'drizzle-orm';
 import { error, fail } from '@sveltejs/kit';
 import { repeat, roundrobin, zip } from 'itertools';
 
@@ -28,6 +29,7 @@ import {
   isRegisteredOrAssignedInDraft,
   randomizeRemainingStudents,
   removeFromAllowlist,
+  startDraft,
   syncResultsToUsers,
   updateDraftInitialLabQuotas,
   updateDraftLotteryLabQuotas,
@@ -139,6 +141,7 @@ export async function load({ params, locals: { session } }) {
       'draft.summary.intervention_count': interventionDrafted.length,
       'draft.summary.lottery_count': lotteryDrafted.length,
     });
+
 
     return {
       draftId,
@@ -297,7 +300,8 @@ export const actions = {
               break;
             }
           }
-
+          
+          await startDraft(db, draftId);
           return true;
         },
         { isolationLevel: 'read committed' },
