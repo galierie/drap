@@ -15,6 +15,7 @@
 
   import * as Card from '$lib/components/ui/card';
   import * as Empty from '$lib/components/ui/empty';
+  import { mergeProps } from 'bits-ui';
   import { assert } from '$lib/assert';
   import { Button } from '$lib/components/ui/button';
   import { enhance } from '$app/forms';
@@ -31,35 +32,29 @@
 
   let { userId, draftId, maxRounds, availableLabs = $bindable() }: Props = $props();
 
-  // svelte-ignore state_referenced_locally
-  const persistedSelectedLabs = new PersistedState<typeof availableLabs>(
-    `selected-labs-${userId}-${draftId}`,
-    [],
-    {
+  const persistedSelectedLabs = $derived(
+    new PersistedState<typeof availableLabs>(`selected-labs-${userId}-${draftId}`, [], {
       syncTabs: true,
-    },
+    }),
   );
 
-  // svelte-ignore state_referenced_locally
-  const persistedAvailableLabs = new PersistedState<typeof availableLabs>(
-    `available-labs-${userId}-${draftId}`,
-    availableLabs,
-    {
+  const persistedAvailableLabs = $derived(
+    new PersistedState<typeof availableLabs>(`available-labs-${userId}-${draftId}`, availableLabs, {
       syncTabs: true,
-    },
+    }),
   );
 
   const remaining = $derived(maxRounds - persistedSelectedLabs.current.length);
   const hasRemaining = $derived(remaining > 0);
 
-  // svelte-ignore state_referenced_locally
-  const persistedLabRemarks = new PersistedState<Record<string, string>>(
-    `lab-remarks-${userId}-${draftId}`,
-    {},
-    {
-      syncTabs: true,
-    },
+  const persistedLabRemarks = $derived(
+    new PersistedState<Record<string, string>>(
+      `lab-remarks-${userId}-${draftId}`,
+      {},
+      { syncTabs: true },
+    ),
   );
+
   const debouncedSetLabRemarks = useDebounce((labId: string, value: string) => {
     persistedLabRemarks.current[labId] = value;
   }, 500);
@@ -130,9 +125,9 @@
       switch (result.type) {
         case 'success':
           toast.success('Uploaded your lab preferences.');
-          localStorage.removeItem(`selected-labs-${userId}-${draftId}`);
-          localStorage.removeItem(`available-labs-${userId}-${draftId}`);
-          localStorage.removeItem(`lab-remarks-${userId}-${draftId}`);
+          persistedAvailableLabs.disconnect();
+          persistedSelectedLabs.disconnect();
+          persistedLabRemarks.disconnect();
           break;
         case 'failure':
           switch (result.status) {
@@ -144,6 +139,11 @@
           }
           break;
         default:
+          toast.error(
+            typeof result.status === 'undefined'
+              ? 'An unknown error occurred while submitting your lab preferences.'
+              : `An unknown "${result.status}" error occurred while submitting your lab preferences.`,
+          );
           break;
       }
     };
@@ -227,12 +227,11 @@
                     <TooltipTrigger>
                       {#snippet child({ props })}
                         <Button
-                          {...props}
                           type="button"
                           size="icon"
                           class="bg-success text-success-foreground hover:bg-success/80"
-                          onclick={moveLabUp.bind(null, idx)}
                           disabled={idx <= 0}
+                          {...mergeProps(props, { onclick: moveLabUp.bind(null, idx) })}
                         >
                           <ArrowUpIcon class="size-5" />
                         </Button>
@@ -244,12 +243,11 @@
                     <TooltipTrigger>
                       {#snippet child({ props })}
                         <Button
-                          {...props}
                           type="button"
                           size="icon"
                           class="bg-warning text-warning-foreground hover:bg-warning/80"
-                          onclick={moveLabDown.bind(null, idx)}
                           disabled={idx >= persistedSelectedLabs.current.length - 1}
+                          {...mergeProps(props, { onclick: moveLabDown.bind(null, idx) })}
                         >
                           <ArrowDownIcon class="size-5" />
                         </Button>
@@ -261,11 +259,10 @@
                     <TooltipTrigger>
                       {#snippet child({ props })}
                         <Button
-                          {...props}
                           type="button"
                           size="icon"
                           variant="destructive"
-                          onclick={resetSelection.bind(null, idx)}
+                          {...mergeProps(props, { onclick: resetSelection.bind(null, idx) })}
                         >
                           <XIcon class="size-5" />
                         </Button>
@@ -277,10 +274,12 @@
               </div>
               <TextArea
                 name="remarks"
-                placeholder={`Hello ${id.toUpperCase()}, my name is... I would like to do more research on...`}
+                placeholder="Hello {id.toUpperCase()}, my name is... I would like to do more research on..."
                 maxlength={1028}
-                value={persistedLabRemarks.current[id] ?? ''}
-                oninput={({ currentTarget: { value } }) => debouncedSetLabRemarks(id, value)}
+                bind:value={
+                  () => persistedLabRemarks.current[id] ?? '',
+                  value => debouncedSetLabRemarks(id, value)
+                }
               />
             </li>
           {/each}
