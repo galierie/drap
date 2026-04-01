@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AreaChart } from 'layerchart';
+  import { AreaChart, AnnotationLine } from 'layerchart';
   import { cubicOut } from 'svelte/easing';
   import { max } from 'd3-array';
   import { format } from 'd3-format';
@@ -23,6 +23,10 @@
   const { draftCreatedAt, registrationClosedAt, startedAt, requestedAt, timelineData }: Props = $props();
 
   const endDate = $derived(startedAt ?? requestedAt);
+
+  const regClosedLabel = $derived(
+    registrationClosedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  );
   
   // Transform timeline data for chart
   const chartPoints = $derived(
@@ -79,10 +83,10 @@
       <div class="space-y-1.5 lg:flex-1">
         <div class="flex flex-wrap items-center gap-2">
           <Card.Title>Registrants over time</Card.Title>
-          <Badge variant="default">Cumulative</Badge>
+          <Badge variant="default">Total per day</Badge>
         </div>
         <Card.Description>
-          Shows cumulative registrant count from draft creation to registration close.
+          Shows how many students registered each day
         </Card.Description>
       </div>
       <div class="text-sm text-muted-foreground">
@@ -115,6 +119,30 @@
           yAxis: { ticks: yTicks, format: value => integerFormat(value), motion: axisMotion, tickLabelProps: { dx: -8 } },
         }}
       >
+        {#snippet aboveMarks({ context })}
+          {@const xScale = context.xScale}
+          {@const yScale = context.yScale}
+          {#if xScale && regClosedLabel}
+            <line 
+              x1={xScale(regClosedLabel)} 
+              x2={xScale(regClosedLabel)} 
+              y1={yScale.range()[1]}
+              y2={yScale.range()[0]}
+              stroke="#ef4444"
+              stroke-dasharray="4,4"
+              stroke-width="1"
+            />
+            <text 
+              x={xScale(regClosedLabel)} 
+              y={yScale.range()[1] - 10} 
+              text-anchor="middle" 
+              fill="#ef4444"
+              font-size="11"
+            >
+              Registration Closed
+            </text>
+          {/if}
+        {/snippet}
         {#snippet tooltip()}
           <Chart.Tooltip indicator="dot" labelKey="label" />
         {/snippet}
