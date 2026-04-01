@@ -54,7 +54,7 @@
   <div class="flex shrink-0 items-center gap-2">
     <form
       method="POST"
-      action="/dashboard/users/?/deleteInvite"
+      action="/dashboard/users/?/delete-invite"
       use:enhance={({ submitter, cancel }) => {
         // eslint-disable-next-line no-alert
         if (!confirm('Are you sure you want to delete this invitation?')) {
@@ -74,8 +74,9 @@
             case 'success':
               toast.success('Invitation deleted.');
               break;
-            case 'failure':
-              toast.error('Failed to delete invitation.');
+            case 'error':
+              assert(result.status === 404);
+              toast.error('Invitation no longer exists.');
               break;
             default:
               break;

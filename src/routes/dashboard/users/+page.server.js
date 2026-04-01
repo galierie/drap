@@ -87,7 +87,7 @@ export const actions = {
     return await tracer.asyncSpan('action.admin', async () => {
       const data = await request.formData();
       const { email } = v.parse(AdminFormData, decode(data));
-      logger.debug('inviting new admin', { email });
+      logger.debug('inviting new admin', { 'payload.email': email });
 
       if (await inviteNewFacultyOrStaff(db, email, null)) {
         logger.info('new admin invited');
@@ -120,7 +120,7 @@ export const actions = {
     return await tracer.asyncSpan('action.faculty', async () => {
       const data = await request.formData();
       const { email, invite: lab } = v.parse(FacultyFormData, decode(data));
-      logger.debug('inviting new faculty', { email, lab });
+      logger.debug('inviting new faculty', { 'payload.email': email, 'payload.lab': lab });
 
       if (await inviteNewFacultyOrStaff(db, email, lab)) {
         logger.info('new faculty invited');
@@ -131,7 +131,7 @@ export const actions = {
       return fail(409);
     });
   },
-  async deleteInvite({ locals: { session }, request }) {
+  async 'delete-invite'({ locals: { session }, request }) {
     if (typeof session?.user === 'undefined') {
       logger.fatal('attempt to delete invite without session');
       error(401);
@@ -153,7 +153,7 @@ export const actions = {
     return await tracer.asyncSpan('action.delete-invite', async () => {
       const data = await request.formData();
       const { id } = v.parse(DeleteInviteFormData, decode(data));
-      logger.debug('deleting invite', { id });
+      logger.debug('deleting invite', { 'payload.id': id });
 
       if (await deleteInvitation(db, id)) {
         logger.info('invite deleted');
