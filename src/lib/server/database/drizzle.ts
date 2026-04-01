@@ -2296,20 +2296,20 @@ export async function getLateRegistrantsCountByDraft(db: DbConnection, draftId: 
 export async function fetchDraftRegistrationTimeline(db: DbConnection, draftId: bigint) {
   return await tracer.asyncSpan('fetch-draft-registration-timeline', async span => {
     span.setAttribute('database.draft.id', draftId.toString());
-    
+
     const result = await db
       .select({
         date: sql`date_trunc('day', ${schema.studentRank.createdAt})`.mapWith(coerceDate),
-        cumulativeCount: sql`sum(count(*)) over (order by date_trunc('day', ${schema.studentRank.createdAt}))::int`.mapWith(coerceNumber),
+        dailyCount: sql`count(*)::int`,
       })
       .from(schema.studentRank)
       .where(eq(schema.studentRank.draftId, draftId))
       .groupBy(sql`date_trunc('day', ${schema.studentRank.createdAt})`)
-      .orderBy(sql`date_trunc('day', ${schema.studentRank.createdAt})`);
+      .orderBy(sql`date_trunc('day', ${schema.studentRank.createdAt})`)
 
     return result.map(r => ({
       date: r.date as Date,
-      count: r.cumulativeCount,
+      count: r.dailyCount as number,
     }));
   });
 }

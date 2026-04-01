@@ -5,7 +5,8 @@
   import { format } from 'd3-format';
   import type { MotionOptions } from 'layerchart/utils/motion.svelte';
   import { prefersReducedMotion } from 'svelte/motion';
-  import { scalePoint, scaleTime } from 'd3-scale';
+  import { scalePoint } from 'd3-scale';
+  import { startOfDay, isAfter, isBefore, addDays } from 'date-fns';
   import { tickStep } from 'd3-array';
 
   import * as Card from '$lib/components/ui/card';
@@ -22,20 +23,45 @@
 
   const { draftCreatedAt, registrationClosedAt, startedAt, requestedAt, timelineData }: Props = $props();
 
-  const endDate = $derived(startedAt ?? requestedAt);
-
   const regClosedLabel = $derived(
     registrationClosedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   );
-  
-  // Transform timeline data for chart
-  const chartPoints = $derived(
-    timelineData.map(d => ({
-      date: d.date,
-      label: d.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      count: d.count,
-    }))
-  );
+
+
+  const allDaysData = $derived.by(() => {
+    const start = startOfDay(draftCreatedAt);
+    const lastDate = startOfDay(startedAt ?? requestedAt);
+    $inspect("last", lastDate)
+    $inspect("startedAt", startedAt)
+    $inspect("req", requestedAt)
+    const result: { date: Date; label: string; count: number }[] = [];
+    
+    const currentDate = new Date(start);
+
+    const sortedData = [...timelineData].sort((a, b) => a.date.getTime() - b.date.getTime());
+    
+    while (!isAfter(currentDate, lastDate)) {
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const currentStr = currentDate.toISOString().split('T')[0];
+      const [year, month, day] = currentStr!.split('-');
+      const dayData = sortedData.find(d => 
+        d.date.toISOString().split('T')[0] === currentStr
+      );
+      
+      result.push({
+          date: new Date(currentDate),
+          label: `${monthNames[parseInt(month!) - 1]} ${parseInt(day!)}`,
+          count: dayData?.count ?? 0,
+      });
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+      $inspect("curr", currentDate)
+    }
+    
+    return result;
+  });
+
+  $inspect(allDaysData)
 
   const yMax = $derived(max(timelineData, d => d.count) ?? 1);
   const yTicks = $derived.by(() => {
@@ -47,6 +73,9 @@
     if (ticks.at(-1) === yMax) return ticks;
     return [...ticks, yMax];
     });
+
+  const xTicks = $derived(allDaysData.map(d => d.label));
+
   const integerFormat = format('d');
 
   const chartConfig = $derived({
@@ -82,8 +111,8 @@
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div class="space-y-1.5 lg:flex-1">
         <div class="flex flex-wrap items-center gap-2">
-          <Card.Title>Registrants over time</Card.Title>
-          <Badge variant="default">Total per day</Badge>
+          <Card.Title>Registrants per day</Card.Title>
+          <Badge variant="default">Draft Creation to Start</Badge>
         </div>
         <Card.Description>
           Shows how many students registered each day
@@ -101,7 +130,7 @@
   <Card.Content class="pt-0">
     <Chart.Container id="registrants-chart" config={chartConfig} class="min-h-[280px] w-full">
       <AreaChart
-        data={chartPoints}
+        data={allDaysData}
         x="label"
         y="count"
         xScale={scalePoint().padding(0)}
@@ -115,7 +144,7 @@
           area: { fillOpacity: 0.22, motion: chartMotion, line: { strokeWidth: 3, motion: chartMotion } },
           points: { r: 5.5, motion: chartMotion },
           tooltip: { context: { mode: 'band' } },
-          xAxis: { grid: false, motion: axisMotion, tickLabelProps: { dy: 8 } },
+          xAxis: { grid: false, motion: axisMotion, tickLabelProps: { dy: 8 }, ticks: xTicks },
           yAxis: { ticks: yTicks, format: value => integerFormat(value), motion: axisMotion, tickLabelProps: { dx: -8 } },
         }}
       >
