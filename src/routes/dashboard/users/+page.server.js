@@ -55,8 +55,7 @@ export async function load({ locals: { session } }) {
       'session.user.id': userId,
     });
 
-    const [labs, allFaculty] = await Promise.all([getLabRegistry(db), getFacultyAndStaff(db)]);
-    const faculty = allFaculty.filter(user => user.googleUserId !== null);
+    const [labs, faculty] = await Promise.all([getLabRegistry(db), getFacultyAndStaff(db)]);
     logger.debug('users page loaded', {
       'lab.count': labs.length,
       'user.faculty_count': faculty.length,

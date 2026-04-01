@@ -456,7 +456,6 @@ export async function getFacultyAndStaff(db: DbConnection) {
     return await db
       .select({
         id: schema.user.id,
-        googleUserId: schema.user.googleUserId,
         email: schema.user.email,
         givenName: schema.user.givenName,
         familyName: schema.user.familyName,
@@ -465,7 +464,7 @@ export async function getFacultyAndStaff(db: DbConnection) {
       })
       .from(schema.user)
       .leftJoin(schema.lab, eq(schema.user.labId, schema.lab.id))
-      .where(eq(schema.user.isAdmin, true));
+      .where(and(eq(schema.user.isAdmin, true), isNotNull(schema.user.googleUserId)));
   });
 }
 

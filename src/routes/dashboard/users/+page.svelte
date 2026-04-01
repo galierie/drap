@@ -29,8 +29,8 @@
       <p class="text-sm text-muted-foreground">No registered users.</p>
     {:else}
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {#each registeredHeads as { id, ...head } (id)}
-          <Faculty user={head} />
+        {#each registeredHeads as { id, ...user } (id)}
+          <Faculty {user} />
         {/each}
       </div>
     {/if}
@@ -48,8 +48,8 @@
       <p class="text-sm text-muted-foreground">No registered users.</p>
     {:else}
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {#each registeredAdmins as { id, ...head } (id)}
-          <Faculty user={head} />
+        {#each registeredAdmins as { id, ...user } (id)}
+          <Faculty {user} />
         {/each}
       </div>
     {/if}
