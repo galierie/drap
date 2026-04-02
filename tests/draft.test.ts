@@ -2646,7 +2646,7 @@ test.describe('Draft Lifecycle', () => {
 
       await adminPage.getByRole('button', { name: 'See Draft Statistics' }).click();
       await adminPage.waitForLoadState('networkidle');
-  
+
       await expect(adminPage.locator('#stat-total-students')).toHaveText('3');
       await expect(adminPage.locator('#stat-participating-labs')).toHaveText('4');
       await expect(adminPage.locator('#quota-interventions')).toHaveText('0');
