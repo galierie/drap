@@ -9,7 +9,7 @@
 </script>
 
 {#if labId !== null}
-  <Badge variant="outline" class="border-primary bg-primary/10 text-xs uppercase">
+  <Badge variant="outline" class="border-primary bg-primary/10 text-xs uppercase h-fit py-1 px-2">
     {labId}
   </Badge>
 {/if}
