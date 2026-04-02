@@ -7,7 +7,6 @@
   import type { MotionOptions } from 'layerchart/utils/motion.svelte';
   import { prefersReducedMotion } from 'svelte/motion';
   import { scalePoint } from 'd3-scale';
-  import { SvelteDate } from 'svelte/reactivity';
 
   import * as Card from '$lib/components/ui/card';
   import * as Chart from '$lib/components/ui/chart';
@@ -45,6 +44,7 @@
 
     const sortedData = [...timelineData].sort((a, b) => a.date.getTime() - b.date.getTime());
 
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const currentDate = new Date(start);
     while (!isAfter(currentDate, lastDate)) {
       const currentStr = currentDate.toDateString();
