@@ -53,7 +53,7 @@
     </Tabs.List>
   </div>
   <Tabs.Content value="students">
-    <div class="flex justify-center xs:justify-start mb-2">
+    <div class="mb-2 flex justify-center xs:justify-start">
       <DropdownMenu.Root bind:open={dropdownOpen}>
         <DropdownMenu.Trigger>
           {#snippet child({ props })}
@@ -63,11 +63,11 @@
               class="bg-background hover:bg-accent dark:bg-input dark:hover:bg-input/80"
             >
               <ChevronDownIcon
-                class="size-4 text-muted-foreground transition-transform {dropdownOpen ? 'rotate-180' : ''}"
+                class="size-4 text-muted-foreground transition-transform {dropdownOpen
+                  ? 'rotate-180'
+                  : ''}"
               />
-              {selectedView === 'pending'
-                ? 'Pending Selection'
-                : 'Already Drafted'}
+              {selectedView === 'pending' ? 'Pending Selection' : 'Already Drafted'}
             </Button>
           {/snippet}
         </DropdownMenu.Trigger>
@@ -83,12 +83,16 @@
     </div>
 
     {#if selectedView === 'pending'}
-      <span class="text-sm text-muted-foreground">Review undrafted students available for selection.</span>
+      <span class="text-sm text-muted-foreground"
+        >Review undrafted students available for selection.</span
+      >
       <div class="flex min-h-0 grow flex-col overflow-y-auto px-4 pb-4">
         <AvailableLoader {draftId} />
       </div>
     {:else if selectedView === 'drafted'}
-      <span class="text-sm text-muted-foreground">Review students who have already been assigned.</span>
+      <span class="text-sm text-muted-foreground"
+        >Review students who have already been assigned.</span
+      >
       <DraftedLoader {draftId} />
     {/if}
   </Tabs.Content>
