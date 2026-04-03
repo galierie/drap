@@ -1776,9 +1776,6 @@ test.describe('Draft Lifecycle', () => {
     test('shows expected aggregate quota values', async ({ adminPage }) => {
       await adminPage.goto('/dashboard/drafts/1/');
 
-      await adminPage.getByRole('button', { name: 'See Draft Statistics' }).click();
-      await adminPage.waitForLoadState('networkidle');
-
       await expect(adminPage.locator('#stat-total-students')).toHaveText('8');
       await expect(adminPage.locator('#stat-participating-labs')).toHaveText('5');
       await expect(adminPage.locator('#quota-interventions')).toHaveText('1');
@@ -1788,9 +1785,6 @@ test.describe('Draft Lifecycle', () => {
     test.describe('Draft Rounds Chart', () => {
       test('renders the chart with every finalized phase label', async ({ adminPage }) => {
         await adminPage.goto('/dashboard/drafts/1/');
-
-        await adminPage.getByRole('button', { name: 'See Draft Statistics' }).click();
-        await adminPage.waitForLoadState('networkidle');
         const chart = adminPage.locator('#draft-rounds-chart');
 
         await expect(chart).toBeVisible();
@@ -1803,9 +1797,6 @@ test.describe('Draft Lifecycle', () => {
 
       test('updates the chart title and tooltip for the selected metric', async ({ adminPage }) => {
         await adminPage.goto('/dashboard/drafts/1/');
-
-        await adminPage.getByRole('button', { name: 'See Draft Statistics' }).click();
-        await adminPage.waitForLoadState('networkidle');
 
         const title = adminPage.locator('#draft-rounds-chart-title');
         const modeSelect = adminPage.locator('#draft-rounds-chart-mode');
@@ -1881,9 +1872,6 @@ test.describe('Draft Lifecycle', () => {
         adminPage,
       }) => {
         await adminPage.goto('/dashboard/drafts/1/');
-
-        await adminPage.getByRole('button', { name: 'See Draft Statistics' }).click();
-        await adminPage.waitForLoadState('networkidle');
 
         const chart = adminPage.locator('#draft-rounds-chart');
         const title = adminPage.locator('#draft-rounds-chart-title');
@@ -2647,9 +2635,6 @@ test.describe('Draft Lifecycle', () => {
   test.describe('Second Draft — Dashboard And History Verification', () => {
     test('admin finalized breakdown is correct for Draft #2', async ({ adminPage }) => {
       await adminPage.goto('/dashboard/drafts/2/');
-
-      await adminPage.getByRole('button', { name: 'See Draft Statistics' }).click();
-      await adminPage.waitForLoadState('networkidle');
 
       await expect(adminPage.locator('#stat-total-students')).toHaveText('3');
       await expect(adminPage.locator('#stat-participating-labs')).toHaveText('4');
