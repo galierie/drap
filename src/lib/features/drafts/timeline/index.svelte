@@ -185,7 +185,6 @@
         {/snippet}
         <SummaryPhase
           {draftId}
-          {requestedAt}
           {draft}
           totalStudents={studentCount}
           {labs}
