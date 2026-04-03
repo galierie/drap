@@ -14,6 +14,8 @@
   import DraftedDraftees from '$lib/features/drafts/draftees/drafted/index.svelte';
   import DraftedLoader from '$lib/features/drafts/draftees/drafted/loader.svelte';
 
+  import * as Sheet from '$lib/components/ui/sheet';
+
   import SystemLogsLoader from '$lib/features/drafts/system-logs/loader.svelte';
   import type { Lab } from '$lib/features/drafts/types';
 
@@ -88,8 +90,12 @@
     </div>
 
     {#if selectedView === 'pending'}
-      <AvailableLoader {draftId} />
+      <span class="text-sm text-muted-foreground">Review undrafted students available for selection.</span>
+      <div class="flex min-h-0 grow flex-col overflow-y-auto px-4 pb-4">
+        <AvailableLoader {draftId} />
+      </div>
     {:else if selectedView === 'drafted'}
+      <span class="text-sm text-muted-foreground">Review students who have already been assigned.</span>
       <DraftedLoader {draftId} />
     {/if}
   </Tabs.Content>
