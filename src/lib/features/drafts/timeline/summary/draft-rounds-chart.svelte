@@ -1,7 +1,7 @@
 <script lang="ts">
   import { AreaChart } from 'layerchart';
   import { cubicOut } from 'svelte/easing';
-  import { cumsum, max, rollup, tickStep } from 'd3-array';
+  import { cumsum, max, tickStep } from 'd3-array';
   import { format } from 'd3-format';
   import type { MotionOptions } from 'layerchart/utils/motion.svelte';
   import { prefersReducedMotion } from 'svelte/motion';
@@ -11,41 +11,46 @@
   import * as Chart from '$lib/components/ui/chart';
   import * as NativeSelect from '$lib/components/ui/native-select';
   import { Badge } from '$lib/components/ui/badge';
-  import type { DraftAssignmentRecord, Lab } from '$lib/features/drafts/types';
+  import type { DraftAssignmentCountByAttribute, Lab } from '$lib/features/drafts/types';
 
   interface Props {
-    records: DraftAssignmentRecord[];
+    assignmentCountsByAttribute: DraftAssignmentCountByAttribute[];
     maxRounds: number;
-    interventionRecords?: DraftAssignmentRecord[];
-    lotteryRecords?: DraftAssignmentRecord[];
     labs: Lab[];
     totalStudents: number;
   }
 
-  const {
-    records,
-    maxRounds,
-    interventionRecords = [],
-    lotteryRecords = [],
-    labs,
-    totalStudents,
-  }: Props = $props();
+  const { assignmentCountsByAttribute, maxRounds, labs, totalStudents }: Props = $props();
 
   let chartMode = $state<'assigned' | 'remaining'>('assigned');
   let selectedLabId = $state('');
 
+  const regularDraftedCounts = $derived(
+    assignmentCountsByAttribute.filter(
+      ({ round }) => round !== null && round > 0 && round <= maxRounds,
+    ),
+  );
+  const interventionDraftedCounts = $derived(
+    assignmentCountsByAttribute.filter(({ round }) => round !== null && round === maxRounds + 1),
+  );
+  const lotteryDraftedCounts = $derived(
+    assignmentCountsByAttribute.filter(({ round }) => round === null),
+  );
+
   const filtered = $derived(
     selectedLabId === ''
       ? {
-          records,
-          interventionRecords,
-          lotteryRecords,
+          regularDraftedCounts,
+          interventionDraftedCounts,
+          lotteryDraftedCounts,
           selectedLabQuota: void 0,
         }
       : {
-          records: records.filter(record => record.labId === selectedLabId),
-          interventionRecords: interventionRecords.filter(record => record.labId === selectedLabId),
-          lotteryRecords: lotteryRecords.filter(record => record.labId === selectedLabId),
+          regularDraftedCounts: regularDraftedCounts.filter(({ labId }) => labId === selectedLabId),
+          interventionDraftedCounts: interventionDraftedCounts.filter(
+            ({ labId }) => labId === selectedLabId,
+          ),
+          lotteryDraftedCounts: lotteryDraftedCounts.filter(({ labId }) => labId === selectedLabId),
           selectedLabQuota: labs.find(lab => lab.id === selectedLabId)?.quota,
         },
   );
@@ -56,18 +61,6 @@
       : filtered.selectedLabQuota,
   );
 
-  const roundCountByNumber = $derived.by(() =>
-    rollup(
-      filtered.records.flatMap(record =>
-        typeof record.round === 'number' && record.round > 0 && record.round <= maxRounds
-          ? [record.round]
-          : [],
-      ),
-      values => values.length,
-      value => value,
-    ),
-  );
-
   const phaseCounts = $derived.by(() => [
     ...Array.from({ length: maxRounds }, (_, index) => {
       const round = index + 1;
@@ -75,20 +68,22 @@
         phaseKey: `round-${round}`,
         axisLabel: `R${round}`,
         tooltipLabel: `Round ${round}`,
-        assigned: roundCountByNumber.get(round) ?? 0,
+        assigned: filtered.regularDraftedCounts
+          .filter(record => record.round === round)
+          .reduce((acc, record) => acc + record.count, 0),
       };
     }),
     {
       phaseKey: 'interventions',
       axisLabel: 'Interventions',
       tooltipLabel: 'Interventions',
-      assigned: filtered.interventionRecords.length,
+      assigned: filtered.interventionDraftedCounts.reduce((acc, record) => acc + record.count, 0),
     },
     {
       phaseKey: 'lottery',
       axisLabel: 'Lottery',
       tooltipLabel: 'Lottery',
-      assigned: filtered.lotteryRecords.length,
+      assigned: filtered.lotteryDraftedCounts.reduce((acc, record) => acc + record.count, 0),
     },
   ]);
 
