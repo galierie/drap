@@ -4,13 +4,13 @@
   import GraduationCapIcon from '@lucide/svelte/icons/graduation-cap';
   import PaperclipIcon from '@lucide/svelte/icons/paperclip';
 
-  import { cn } from '$lib/components/ui/utils';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import * as Tabs from '$lib/components/ui/tabs';
   import AvailableLoader from '$lib/features/drafts/draftees/available/loader.svelte';
   import DraftedLoader from '$lib/features/drafts/draftees/drafted/loader.svelte';
   import SystemLogsLoader from '$lib/features/drafts/system-logs/loader.svelte';
   import { Button } from '$lib/components/ui/button';
+  import { cn } from '$lib/components/ui/utils';
   import type { Lab } from '$lib/features/drafts/types';
 
   import LabRoundSummary from './lab-round-summary.svelte';
@@ -84,7 +84,7 @@
           </DropdownMenu.Content>
         </DropdownMenu.Root>
       </div>
-      
+
       {#if selectedView === 'pending'}
         <span class="text-sm text-muted-foreground"
           >Review undrafted students available for selection.</span
