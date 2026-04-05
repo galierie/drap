@@ -1832,6 +1832,13 @@ test.describe('Draft Lifecycle', () => {
   });
 
   test.describe('Admin Finalized Breakdown', () => {
+    test('shows expected stat card values', async ({ adminPage }) => {
+      await adminPage.goto('/dashboard/drafts/1/');
+
+      await expect(adminPage.locator('#stat-total-students')).toHaveText('8');
+      await expect(adminPage.locator('#stat-participating-labs')).toHaveText('5');
+    });
+
     test.describe('Draft Rounds Chart', () => {
       test('renders the chart with every finalized phase label', async ({ adminPage }) => {
         await adminPage.goto('/dashboard/drafts/1/');
@@ -2768,6 +2775,9 @@ test.describe('Draft Lifecycle', () => {
   test.describe('Second Draft — Dashboard And History Verification', () => {
     test('admin finalized breakdown is correct for Draft #2', async ({ adminPage }) => {
       await adminPage.goto('/dashboard/drafts/2/');
+
+      await expect(adminPage.locator('#stat-total-students')).toHaveText('3');
+      await expect(adminPage.locator('#stat-participating-labs')).toHaveText('4');
 
       await adminPage.getByRole('button', { name: 'See Drafted Students by Method' }).click();
       await adminPage.waitForLoadState('networkidle');

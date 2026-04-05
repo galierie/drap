@@ -2,6 +2,7 @@
   import ArrowUpFromLineIcon from '@lucide/svelte/icons/arrow-up-from-line';
   import { format, lightFormat } from 'date-fns';
 
+  import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
   import type {
     Draft,
@@ -142,7 +143,10 @@
   <!-- Header -->
   <div class="flex w-full flex-col justify-between gap-2 lg:flex-row">
     <div>
-      <h2 class="text-2xl font-bold">Draft #{draftId.toString()}</h2>
+      <h2 class="flex items-center gap-2 text-2xl font-bold">
+        <span>Draft #{draftId.toString()}</span>
+        <Badge>{draft.maxRounds} Rounds</Badge>
+      </h2>
       <p class="text-muted-foreground">
         Started {format(draft.activePeriodStart, 'PPP')} &middot; {getPhaseLabel(currentPhase)}
       </p>
