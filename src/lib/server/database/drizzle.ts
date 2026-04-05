@@ -2414,7 +2414,7 @@ export async function getLabDemandBordaScores(db: DbConnection, draftId: bigint)
     return await db
       .select({
         labId: schema.studentRankLab.labId,
-        bordaScore: sum(sql`${studentLabCount.n} - ${schema.studentRankLab.index}`).mapWith(
+        bordaScore: sum(sql`${studentLabCount.n} - ${schema.studentRankLab.index} + 1`).mapWith(
           coerceNumber,
         ),
       })
