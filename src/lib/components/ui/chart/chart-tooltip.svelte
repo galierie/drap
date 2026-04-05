@@ -22,6 +22,7 @@
     labelFormatter?:
       | ((value: unknown, payload: TooltipPayload[]) => string | number | Snippet)
       | null;
+    valueFormatter?: ((value: unknown) => string | number) | null;
     formatter?: Snippet<
       [
         {
@@ -44,6 +45,7 @@
     labelKey,
     label,
     labelFormatter = defaultFormatter,
+    valueFormatter = null,
     labelClassName,
     formatter,
     nameKey,
@@ -161,7 +163,7 @@
               </div>
               {#if typeof item.value !== 'undefined' && item.value !== null}
                 <span class="font-mono font-medium text-foreground tabular-nums">
-                  {item.value}
+                  {valueFormatter === null ? item.value : valueFormatter(item.value)}
                 </span>
               {/if}
             </div>

@@ -74,6 +74,7 @@
               assert(typeof value === 'string');
               return labNameById.get(value) ?? value;
             }}
+            valueFormatter={value => `${value}%`}
           />
         {/snippet}
       </BarChart>
