@@ -99,7 +99,9 @@
           />
         {/snippet}
       </PieChart>
-      <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+      <div
+        class="pointer-events-none absolute inset-0 right-[100px] flex flex-col items-center justify-center"
+      >
         <span class="text-3xl font-bold tabular-nums">{percentFormat(data.bordaScore)}</span>
         <div class="flex items-center gap-1 text-xs text-muted-foreground">
           <span>Borda Score</span>
