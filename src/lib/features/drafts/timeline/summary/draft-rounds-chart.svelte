@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AreaChart } from 'layerchart';
+  import { Area, AreaChart, LinearGradient } from 'layerchart';
   import { cubicOut } from 'svelte/easing';
   import { cumsum, tickStep } from 'd3-array';
   import { format } from 'd3-format';
@@ -187,6 +187,16 @@
           },
         }}
       >
+        {#snippet marks()}
+          <LinearGradient class="from-primary/50 to-primary/1" vertical>
+            {#snippet children({ gradient })}
+              <Area
+                line={{ class: 'stroke-primary', strokeWidth: 3, motion: chartMotion }}
+                fill={gradient}
+              />
+            {/snippet}
+          </LinearGradient>
+        {/snippet}
         {#snippet tooltip()}
           <Chart.Tooltip class="draft-rounds-chart-tooltip" indicator="dot" />
         {/snippet}
