@@ -65,12 +65,12 @@
             </Empty.Header>
           </Empty.Root>
         {:else if query.isError}
-          <Empty.Root class="min-h-40 grow">
+          <Empty.Root variant="destructive" class="min-h-40 grow">
             <Empty.Media variant="icon">
               <UsersIcon class="size-5" />
             </Empty.Media>
             <Empty.Header>
-              <Empty.Title class="text-destructive">Failed to Load Invitations</Empty.Title>
+              <Empty.Title>Failed to Load Invitations</Empty.Title>
               <Empty.Description>Please try again in a moment.</Empty.Description>
             </Empty.Header>
           </Empty.Root>
