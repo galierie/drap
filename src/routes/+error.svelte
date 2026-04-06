@@ -9,10 +9,11 @@
 </script>
 
 <main class="flex min-h-dvh items-center justify-center px-6 py-12">
-  <Empty variant={status === 404 ? 'warning' : 'destructive'} class="w-full max-w-xl">
-    {#snippet icon()}
-      <TriangleAlertIcon class="size-5" />
-    {/snippet}
+  <Empty
+    variant={status === 404 ? 'warning' : 'destructive'}
+    media={{ icon: TriangleAlertIcon, size: 'sm' }}
+    class="w-full max-w-xl"
+  >
     {#snippet title()}
       {#if status === 404}
         Page Not Found

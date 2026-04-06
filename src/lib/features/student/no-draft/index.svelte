@@ -6,10 +6,7 @@
   import { resolve } from '$app/paths';
 </script>
 
-<Empty>
-  {#snippet icon()}
-    <CalendarIcon class="size-12 text-muted-foreground" />
-  {/snippet}
+<Empty media={{ icon: CalendarIcon, size: 'lg' }}>
   {#snippet title()}No Active Draft{/snippet}
   {#snippet description()}
     There's no draft currently open for registration. Check back later when the next draft period

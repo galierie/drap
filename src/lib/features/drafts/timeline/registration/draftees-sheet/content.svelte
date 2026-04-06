@@ -36,10 +36,7 @@
 {#if students.length > 0}
   <DrafteesSheetTable {students} />
 {:else}
-  <Empty>
-    {#snippet icon()}
-      <UsersIcon class="size-5" />
-    {/snippet}
+  <Empty media={{ icon: UsersIcon, size: 'sm' }}>
     {#snippet title()}No Draftees Yet{/snippet}
     {#snippet description()}Registered and late draftees will appear here once available.{/snippet}
   </Empty>

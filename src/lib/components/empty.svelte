@@ -1,12 +1,17 @@
 <script lang="ts">
+  import type { LucideIcon } from '@lucide/svelte';
   import type { Snippet } from 'svelte';
   import { tv, type VariantProps } from 'tailwind-variants';
 
   import * as Empty from '$lib/components/ui/empty';
 
   const emptyWrapperMediaVariants = tv({
-    base: 'flex size-10 shrink-0 items-center justify-center rounded-lg [&_svg:not([class*=size-])]:size-6',
+    base: 'flex shrink-0 items-center justify-center',
     variants: {
+      size: {
+        sm: 'size-10 rounded-lg',
+        lg: 'size-14 rounded-lg',
+      },
       variant: {
         default: 'border border-border bg-muted text-foreground',
         info: 'preset-tonal-accent',
@@ -17,6 +22,16 @@
     },
     defaultVariants: {
       variant: 'default',
+    },
+  });
+
+  const emptyWrapperMediaIconVariants = tv({
+    base: 'shrink-0',
+    variants: {
+      size: {
+        sm: 'size-6',
+        lg: 'size-8',
+      },
     },
   });
 
@@ -50,36 +65,46 @@
     },
   });
 
-  type EmptyVariant = VariantProps<typeof emptyWrapperMediaVariants>['variant'];
+  type EmptyVariantProps = VariantProps<typeof emptyWrapperMediaVariants>;
+  type EmptyVariant = EmptyVariantProps['variant'];
+  type EmptySizeVariant = EmptyVariantProps['size'];
+
+  interface EmptyMediaProps {
+    icon: LucideIcon;
+    size: EmptySizeVariant;
+    class?: string;
+  }
 
   interface Props {
     variant?: EmptyVariant;
+    media?: EmptyMediaProps;
     title?: Snippet;
     description?: Snippet;
     class?: string;
-    mediaClass?: string;
-    icon?: Snippet;
     children?: Snippet;
   }
 
-  let {
+  const {
     variant = 'default',
+    media,
     title,
     description,
     class: className,
-    mediaClass,
-    icon,
     children,
   }: Props = $props();
 </script>
 
 <Empty.Root class={className}>
-  {#if typeof icon !== 'undefined'}
+  {#if typeof media !== 'undefined'}
     <Empty.Media
-      variant="default"
-      class={emptyWrapperMediaVariants({ variant, class: mediaClass })}
-      children={icon}
-    />
+      class={emptyWrapperMediaVariants({
+        variant,
+        size: media.size,
+        class: media.class,
+      })}
+    >
+      <media.icon class={emptyWrapperMediaIconVariants({ size: media.size })} />
+    </Empty.Media>
   {/if}
   <Empty.Header class="empty:hidden">
     {#if typeof title !== 'undefined'}

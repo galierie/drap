@@ -4,10 +4,7 @@
   import Empty from '$lib/components/empty.svelte';
 </script>
 
-<Empty>
-  {#snippet icon()}
-    <ShuffleIcon class="size-12 text-muted-foreground" />
-  {/snippet}
+<Empty media={{ icon: ShuffleIcon, size: 'lg' }}>
   {#snippet title()}Lottery / Review in Progress{/snippet}
   {#snippet description()}
     The regular draft rounds have completed. The remaining students are being processed through

@@ -188,10 +188,7 @@
         </ul>
         {#if persistedAvailableLabs.current.length === 0}
           <div class="flex grow items-center justify-center">
-            <Empty>
-              {#snippet icon()}
-                <InboxIcon />
-              {/snippet}
+            <Empty media={{ icon: InboxIcon, size: 'sm' }}>
               {#snippet title()}No more labs available{/snippet}
               {#snippet description()}There are no more labs remaining in the list.{/snippet}
             </Empty>
@@ -292,10 +289,7 @@
         </ol>
         {#if persistedSelectedLabs.current.length === 0}
           <div class="flex grow items-center justify-center">
-            <Empty>
-              {#snippet icon()}
-                <BoxSelectIcon />
-              {/snippet}
+            <Empty media={{ icon: BoxSelectIcon, size: 'sm' }}>
               {#snippet title()}No labs selected{/snippet}
               {#snippet description()}
                 Click on a lab from the available list to add it to your ranking.

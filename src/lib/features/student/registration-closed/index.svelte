@@ -16,10 +16,7 @@
   const closeTime = $derived(format(registrationClosedAt, 'pp'));
 </script>
 
-<Empty>
-  {#snippet icon()}
-    <LockIcon class="size-12 text-muted-foreground" />
-  {/snippet}
+<Empty media={{ icon: LockIcon, size: 'lg' }}>
   {#snippet title()}Registration Closed{/snippet}
   {#snippet description()}
     Registration for this draft closed on <strong>{closeDate}</strong> at

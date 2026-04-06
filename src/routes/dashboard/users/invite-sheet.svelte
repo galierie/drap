@@ -55,26 +55,17 @@
       </div>
       <div class="flex min-h-0 grow flex-col gap-4 overflow-y-auto">
         {#if query.isPending}
-          <Empty>
-            {#snippet icon()}
-              <Loader2Icon class="size-5 animate-spin text-muted-foreground" />
-            {/snippet}
+          <Empty media={{ icon: Loader2Icon, size: 'sm' }}>
             {#snippet title()}Loading Invitations{/snippet}
             {#snippet description()}Fetching pending invitations.{/snippet}
           </Empty>
         {:else if query.isError}
-          <Empty variant="destructive">
-            {#snippet icon()}
-              <UsersIcon class="size-5" />
-            {/snippet}
+          <Empty variant="destructive" media={{ icon: UsersIcon, size: 'sm' }}>
             {#snippet title()}Failed to Load Invitations{/snippet}
             {#snippet description()}Please try again in a moment.{/snippet}
           </Empty>
         {:else if query.data.length === 0}
-          <Empty>
-            {#snippet icon()}
-              <UsersIcon class="size-5" />
-            {/snippet}
+          <Empty media={{ icon: UsersIcon, size: 'sm' }}>
             {#snippet title()}No Pending Invitations{/snippet}
             {#snippet description()}New invitations will appear here after they are sent.{/snippet}
           </Empty>

@@ -21,18 +21,12 @@
 </script>
 
 {#if drafteesQuery.isPending || lateQuery.isPending}
-  <Empty>
-    {#snippet icon()}
-      <Loader2Icon class="size-5 animate-spin text-muted-foreground" />
-    {/snippet}
+  <Empty media={{ icon: Loader2Icon, size: 'sm' }}>
     {#snippet title()}Loading Draftees{/snippet}
     {#snippet description()}Fetching registered and late draftees.{/snippet}
   </Empty>
 {:else if drafteesQuery.isError || lateQuery.isError}
-  <Empty variant="destructive">
-    {#snippet icon()}
-      <UsersIcon class="size-5" />
-    {/snippet}
+  <Empty variant="destructive" media={{ icon: UsersIcon, size: 'sm' }}>
     {#snippet title()}Failed to Load Draftees{/snippet}
     {#snippet description()}Please try again in a moment.{/snippet}
   </Empty>

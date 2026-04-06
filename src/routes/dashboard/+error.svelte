@@ -11,11 +11,9 @@
 <main class="flex h-full items-center justify-center px-6 py-12">
   <Empty
     variant={status === 404 || status === 499 ? 'warning' : 'destructive'}
+    media={{ icon: TriangleAlertIcon, size: 'sm' }}
     class="w-full max-w-xl"
   >
-    {#snippet icon()}
-      <TriangleAlertIcon class="size-5" />
-    {/snippet}
     {#snippet title()}
       {#if status === 499}
         No Active Draft

@@ -20,10 +20,7 @@
 </script>
 
 <DataTable data={students} variant="registration-sheet">
-  <Empty class="min-h-40 grow">
-    {#snippet icon()}
-      <UsersIcon class="size-5" />
-    {/snippet}
+  <Empty media={{ icon: UsersIcon, size: 'sm' }} class="min-h-40 grow">
     {#snippet title()}No Matching Draftees{/snippet}
     {#snippet description()}Adjust the search or turn off the late-only filter.{/snippet}
   </Empty>

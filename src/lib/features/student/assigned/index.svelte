@@ -13,10 +13,7 @@
   const { lab }: Props = $props();
 </script>
 
-<Empty>
-  {#snippet icon()}
-    <PartyPopperIcon class="size-12 text-muted-foreground" />
-  {/snippet}
+<Empty media={{ icon: PartyPopperIcon, size: 'lg' }}>
   {#snippet title()}Congratulations!{/snippet}
   {#snippet description()}
     You have been assigned to <strong>{lab.name}</strong>. Welcome to your new research lab!

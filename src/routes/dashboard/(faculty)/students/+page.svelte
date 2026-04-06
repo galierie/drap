@@ -20,10 +20,7 @@
 </script>
 
 {#if typeof info === 'undefined'}
-  <Empty>
-    {#snippet icon()}
-      <BanIcon class="size-5 text-muted-foreground" />
-    {/snippet}
+  <Empty media={{ icon: BanIcon, size: 'sm' }}>
     {#snippet title()}Lab Excluded from This Draft{/snippet}
     {#snippet description()}
       Your lab was not included in the current draft's lineup. Contact the draft administrators if
@@ -40,10 +37,7 @@
     autoAcknowledgeReason,
   } = info}
   {#if currRound === null}
-    <Empty>
-      {#snippet icon()}
-        <Clock3Icon class="size-5 text-muted-foreground" />
-      {/snippet}
+    <Empty media={{ icon: Clock3Icon, size: 'sm' }}>
       {#snippet title()}Draft Under Review{/snippet}
       {#snippet description()}
         The draft is now in review. Lottery assignment has already run, and draft administrators are
@@ -54,10 +48,7 @@
       <PreviousPicks {researchers} />
     {/if}
   {:else if currRound > maxRounds}
-    <Empty>
-      {#snippet icon()}
-        <ShuffleIcon class="size-5 text-muted-foreground" />
-      {/snippet}
+    <Empty media={{ icon: ShuffleIcon, size: 'sm' }}>
       {#snippet title()}Lottery Stage{/snippet}
       {#snippet description()}
         The draft is now in the lottery stage. Kindly contact the draft administrators on how to
@@ -68,10 +59,7 @@
       <PreviousPicks {researchers} />
     {/if}
   {:else if currRound === 0}
-    <Empty>
-      {#snippet icon()}
-        <InfoIcon class="size-5 text-muted-foreground" />
-      {/snippet}
+    <Empty media={{ icon: InfoIcon, size: 'sm' }}>
       {#snippet title()}Registration Still Open{/snippet}
       {#snippet description()}
         Students are still registering for this draft. Kindly wait for the draft administrators to
@@ -90,10 +78,7 @@
       {autoAcknowledgeReason}
     />
     {#if autoAcknowledgeReason === 'quota-exhausted'}
-      <Empty>
-        {#snippet icon()}
-          <CircleSlashIcon class="size-5 text-muted-foreground" />
-        {/snippet}
+      <Empty media={{ icon: CircleSlashIcon, size: 'sm' }}>
         {#snippet title()}No Slots Remaining{/snippet}
         {#snippet description()}
           This lab has no more draft slots remaining for the rest of this draft. No action is
@@ -104,10 +89,7 @@
         <PreviousPicks {researchers} />
       {/if}
     {:else if autoAcknowledgeReason === 'no-preferences'}
-      <Empty>
-        {#snippet icon()}
-          <UserXIcon class="size-5 text-muted-foreground" />
-        {/snippet}
+      <Empty media={{ icon: UserXIcon, size: 'sm' }}>
         {#snippet title()}No Student Preferences This Round{/snippet}
         {#snippet description()}
           No undrafted students have selected this lab in this round. No action is required until
