@@ -737,11 +737,12 @@ export const actions = {
 
       const lotteryAssignments = assignments
         .filter(({ round }) => round === null)
-        .map(({ labId, labName, givenName, familyName, email }) => ({
+        .map(({ labId, labName, givenName, familyName, email, avatarUrl }) => ({
           labId,
           labName,
           studentName: `${givenName} ${familyName}`,
           studentEmail: email,
+          avatarUrl,
         }));
 
       await inngest.send(
