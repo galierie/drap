@@ -546,6 +546,7 @@ export const actions = {
               labName,
               studentName: `${student.givenName} ${student.familyName}`,
               studentEmail: student.email,
+              avatarUrl: student.avatarUrl,
               recipientEmail: email,
               recipientName: `${givenName} ${familyName}`,
             }),
