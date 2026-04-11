@@ -12,15 +12,6 @@ services:
     environment:
       HOST: ${HOST:?required}
       SCHEME: ${SCHEME:?required}
-    volumes:
-      - type: bind
-        source: ./docker/haproxy/haproxy.cfg
-        target: /usr/local/etc/haproxy/haproxy.cfg
-        read_only: true
-      - type: bind
-        source: ./docker/haproxy/allowed-paths.lst
-        target: /usr/local/etc/haproxy/allowed-paths.lst
-        read_only: true
     networks:
       - edge
     depends_on:

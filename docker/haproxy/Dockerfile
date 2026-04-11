@@ -24,3 +24,5 @@ RUN mkdir -p /out \
 
 FROM haproxy:3.3.5-alpine3.23
 COPY --from=blocklists /out/external.lst /usr/local/etc/haproxy/external.lst
+COPY haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg
+COPY allowed-paths.lst /usr/local/etc/haproxy/allowed-paths.lst
