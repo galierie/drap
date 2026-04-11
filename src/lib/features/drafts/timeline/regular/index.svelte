@@ -53,7 +53,9 @@
   </div>
   <Tabs.Content value="summary">
     {#if group === 'summary'}
-      <Card.Root class="overflow-hidden border-border/60 bg-linear-to-br from-muted/40 via-background to-muted/10 shadow-xs">
+      <Card.Root
+        class="overflow-hidden border-border/60 bg-linear-to-br from-muted/40 via-background to-muted/10 shadow-xs"
+      >
         <Card.Header class="gap-3">
           <div class="flex flex-wrap items-start justify-between gap-2">
             <div class="space-y-1">

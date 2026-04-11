@@ -83,11 +83,7 @@
 {#if chartData.length === 0}
   <p class="text-sm text-muted-foreground">No regular-round data is available yet.</p>
 {:else}
-  <Chart.Container
-    id="regular-round-summary-chart"
-    config={chartConfig}
-    class="max-h-96 w-full"
-  >
+  <Chart.Container id="regular-round-summary-chart" config={chartConfig} class="max-h-96 w-full">
     <BarChart
       data={chartData}
       x="round"
