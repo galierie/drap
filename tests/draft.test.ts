@@ -834,7 +834,7 @@ test.describe('Draft Lifecycle', () => {
       const response = await responsePromise;
       const responseData = await response.json();
       expect(responseData.type).toBe('success');
-      await expect(adminPage.getByText(/Round 1/u)).toBeVisible();
+      await expect(adminPage.getByText(/Round 1/u).first()).toBeVisible();
     });
   });
 
@@ -1224,7 +1224,7 @@ test.describe('Draft Lifecycle', () => {
   test.describe('Verify Round 2', () => {
     test('draft is now in Round 2', async ({ adminPage }) => {
       await adminPage.goto('/dashboard/drafts/1/');
-      await expect(adminPage.getByText(/Round 2/u)).toBeVisible();
+      await expect(adminPage.getByText(/Round 2/u).first()).toBeVisible();
       await expectRegularStudentsContents(
         adminPage,
         'Already Drafted',
@@ -1447,7 +1447,7 @@ test.describe('Draft Lifecycle', () => {
   test.describe('Verify Round 3', () => {
     test('draft is now in Round 3', async ({ adminPage }) => {
       await adminPage.goto('/dashboard/drafts/1/');
-      await expect(adminPage.getByText(/Round 3/u)).toBeVisible();
+      await expect(adminPage.getByText(/Round 3/u).first()).toBeVisible();
       await expectRegularStudentsContents(
         adminPage,
         'Already Drafted',
@@ -2607,7 +2607,7 @@ test.describe('Draft Lifecycle', () => {
       const responseData = await response.json();
       expect(responseData.type).toBe('success');
 
-      await expect(adminPage.getByText(/Round 1/u)).toBeVisible();
+      await expect(adminPage.getByText(/Round 1/u).first()).toBeVisible();
     });
 
     test('Draft #2 round-1 auto-acks show correct callouts', async ({
@@ -2697,7 +2697,7 @@ test.describe('Draft Lifecycle', () => {
 
     test('Draft #2 reaches Round 2', async ({ adminPage }) => {
       await adminPage.goto('/dashboard/drafts/2/');
-      await expect(adminPage.getByText(/Round 2/u)).toBeVisible();
+      await expect(adminPage.getByText(/Round 2/u).first()).toBeVisible();
     });
 
     test('Draft #2 round-2 auto-acks show correct callouts', async ({
