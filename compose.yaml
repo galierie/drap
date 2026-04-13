@@ -13,7 +13,9 @@ services:
       - database
     restart: always
     healthcheck:
-      test: ['CMD', 'pg_isready']
+      test:
+        - 'CMD'
+        - 'pg_isready'
       interval: 5s
       timeout: 5s
       retries: 5
@@ -28,7 +30,11 @@ services:
       - 8288:8288
     restart: always
     healthcheck:
-      test: ['CMD', 'curl', '--fail', 'http://localhost:8288/health']
+      test:
+        - 'CMD'
+        - 'curl'
+        - '--fail'
+        - 'http://localhost:8288/health'
       interval: 30s
       timeout: 10s
       retries: 3
@@ -47,7 +53,10 @@ services:
       - telemetry
     restart: always
     healthcheck:
-      test: ['CMD', '/httpget', 'http://localhost:5080/healthz']
+      test:
+        - 'CMD'
+        - '/httpget'
+        - 'http://localhost:5080/healthz'
       interval: 10s
       timeout: 5s
       retries: 5
@@ -66,10 +75,8 @@ services:
     restart: always
     healthcheck:
       test:
-        [
-          'CMD-SHELL',
-          'curl --fail --silent --show-error http://127.0.0.1:9000/health && curl --fail --silent --show-error http://127.0.0.1:9001/rustfs/console/health',
-        ]
+        - 'CMD-SHELL'
+        - 'curl --fail --silent --show-error http://127.0.0.1:9000/health && curl --fail --silent --show-error http://127.0.0.1:9001/rustfs/console/health'
       interval: 30s
       timeout: 10s
       retries: 3
