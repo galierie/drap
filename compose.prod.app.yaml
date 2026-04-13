@@ -103,6 +103,9 @@ services:
       inngest:
         condition: service_healthy
         required: true
+      o2:
+        condition: service_healthy
+        required: true
     restart: always
 
 networks:
