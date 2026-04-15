@@ -51,6 +51,10 @@ flowchart TD
         subgraph telemetry [telemetry]
             O2[OpenObserve:5080]
         end
+
+        subgraph storage [storage]
+            RustFS[RustFS:9000/9001]
+        end
     end
 
     User <--> HAProxy
@@ -61,6 +65,7 @@ flowchart TD
     SvelteKit -.->|OpenTelemetry| O2
     Inngest <--> Redis
     Inngest <--> SQLite
+    SvelteKit <--> RustFS
     Drizzle <--> Postgres
 ```
 
@@ -71,7 +76,7 @@ Development and production do not use the same environment-variable surface. The
 <details>
 <summary><strong>Development</strong></summary>
 
-For host-run app processes, `pnpm docker:dev` already starts PostgreSQL, Inngest, and OpenObserve with local-friendly defaults. You still need to export the app-facing variables below yourself.
+For host-run app processes, `pnpm docker:dev` already starts PostgreSQL, Inngest, OpenObserve, and RustFS with local-friendly defaults. You still need to export the app-facing variables below yourself.
 
 | **Variable**                  | **Used by**                                 | **Required** | **Recommended**                                                                                           |
 | ----------------------------- | ------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------- |
@@ -80,7 +85,7 @@ For host-run app processes, `pnpm docker:dev` already starts PostgreSQL, Inngest
 | `POSTGRES_URL`                | App database connection.                    | Yes          | `postgresql://postgres:password@localhost:5432/postgres`; use `/test` in CI.                              |
 | `GOOGLE_OAUTH_CLIENT_ID`      | Google OAuth login.                         | Yes          | Value from the [Google Cloud Console].                                                                    |
 | `GOOGLE_OAUTH_CLIENT_SECRET`  | Google OAuth login.                         | Yes          | Value from the [Google Cloud Console].                                                                    |
-| `DRAP_ENCRYPTION_KEY`         | Encrypts sensitive OAuth tokens.            | Yes          | Generate with `pnpm encryption:generate`.                                                                 |
+| `DRAP_ENCRYPTION_KEY`         | Encrypts sensitive OAuth tokens.            | Yes          | Generate with `pnpm random:bytes -- 32`.                                                                  |
 | `DRAP_ASSERT_DOMAIN`          | Allowed email-domain restriction.           | No           | `up.edu.ph` for production-like behavior.                                                                 |
 | `DRAP_ENABLE_EMAILS`          | Real email delivery.                        | No           | Leave unset unless you intentionally want live email delivery.                                            |
 | `INNGEST_DEV`                 | Host-run app access to local Inngest.       | Yes          | `http://localhost:8288`; the server itself is provided by `pnpm docker:dev`.                              |
@@ -99,17 +104,21 @@ For `pnpm docker:prod:app`, Compose derives the canonical origin from `SCHEME` a
 | `SCHEME`                     | Canonical public scheme for the app origin. | Yes          | `https`                                                      |
 | `HOST`                       | HAProxy ingress host matching.              | Yes          | `drap.dcs.upd.edu.ph`                                        |
 | `POSTGRES_PASSWORD`          | PostgreSQL container credentials.           | Yes          | Use a strong random secret.                                  |
-| `DRAP_ENCRYPTION_KEY`        | Encrypts sensitive OAuth tokens.            | Yes          | Generate with `pnpm encryption:generate`.                    |
+| `DRAP_ENCRYPTION_KEY`        | Encrypts sensitive OAuth tokens.            | Yes          | Generate with `pnpm random:bytes -- 32`.                     |
 | `GOOGLE_OAUTH_CLIENT_ID`     | Google OAuth login.                         | Yes          | Value from the [Google Cloud Console].                       |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | Google OAuth login.                         | Yes          | Value from the [Google Cloud Console].                       |
 | `INNGEST_EVENT_KEY`          | Inngest event signing.                      | Yes          | Production event key from Inngest.                           |
 | `INNGEST_SIGNING_KEY`        | Inngest webhook signing.                    | Yes          | Production signing key from Inngest.                         |
+| `RUSTFS_ACCESS_KEY`          | RustFS root access key.                     | Yes          | Generate with `pnpm random:bytes -- 24`.                     |
+| `RUSTFS_SECRET_KEY`          | RustFS root secret key.                     | Yes          | Generate with `pnpm random:bytes -- 48`.                     |
 | `OTEL_EXPORTER_OTLP_HEADERS` | OpenTelemetry auth headers.                 | Yes          | Percent-encoded Basic auth for your OpenObserve credentials. |
 | `ZO_ROOT_USER_EMAIL`         | OpenObserve bootstrap admin user.           | Yes          | Dedicated admin email address.                               |
 | `ZO_ROOT_USER_PASSWORD`      | OpenObserve bootstrap admin password.       | Yes          | Use a strong random secret.                                  |
 | `DRIZZLE_MASTERPASS`         | Drizzle Gateway admin password.             | Yes          | Use a strong random secret.                                  |
 
 `pnpm docker:prod:app` already injects `POSTGRES_URL`, `DRAP_ASSERT_DOMAIN`, `DRAP_ENABLE_EMAILS`, `INNGEST_BASE_URL`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_PROTOCOL`, `ADDRESS_HEADER`, and `XFF_DEPTH` internally.
+
+One-shot setup services live behind the Compose `setup` profile so they do not interfere with `docker compose up --wait`. Use `setup-bucket` to bootstrap the RustFS bucket and `setup-database` to run Drizzle migrations after the long-running services are healthy.
 
 When `SCHEME=https`, [`compose.prod.app.tls.yaml`](/X:/projects/drap/compose.prod.app.tls.yaml) expects a repo-root [`certificate.pem`](/X:/projects/drap/certificate.pem). A symlink is acceptable. The TLS override exposes it to HAProxy as a Docker secret mounted at `/run/secrets/certificate.pem`, and HAProxy will fail to start if the file is missing or malformed. HAProxy's static config files are baked into the image at build time, so changes to [`docker/haproxy/haproxy.cfg`](/X:/projects/drap/docker/haproxy/haproxy.cfg) or [`docker/haproxy/allowed-paths.lst`](/X:/projects/drap/docker/haproxy/allowed-paths.lst) require rebuilding the HAProxy image.
 
@@ -130,8 +139,17 @@ pnpm install
 
 # Generate the AES-256-GCM encryption key used for sensitive OAuth tokens.
 # Save this key to the `DRAP_ENCRYPTION_KEY` environment variable in `.env`.
-pnpm encryption:generate
+pnpm random:bytes -- 32
+
+# Other useful examples:
+# Save this key to the `RUSTFS_ACCESS_KEY` environment variable.
+pnpm random:bytes -- 24
+
+# Save this key to the `RUSTFS_SECRET_KEY` environment variable.
+pnpm random:bytes -- 48
 ```
+
+The generic helper script accepts a single positional `<bytes>` argument and prints a Base64URL-encoded random value. It is implemented in [`src/scripts/generate-random-bytes.js`](./src/scripts/generate-random-bytes.js).
 
 ### Database Commands
 
@@ -198,10 +216,12 @@ flowchart TD
 
 | Command                    | Files                                                                                        | Services                                                                              |
 | -------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `pnpm docker:dev`          | `compose.yaml` + `compose.dev.yaml`                                                          | base services plus dev overrides, including `o2`                                      |
+| `pnpm docker:dev`          | `compose.yaml` + `compose.dev.yaml`                                                          | base services plus dev overrides, including `o2` and `rustfs`                         |
 | `pnpm docker:dev:ci`       | `compose.yaml` + `compose.dev.yaml` + `compose.dev.ci.yaml`                                  | dev-style backing services with CI Inngest SDK URL override, excluding `o2` via reset |
-| `pnpm docker:prod`         | `compose.yaml` + `compose.prod.yaml`                                                         | `postgres` (prod), `inngest` (prod), `redis`, `o2`, `drizzle-gateway`                 |
-| `pnpm docker:prod:app`     | `compose.yaml` + `compose.prod.yaml` + `compose.prod.app.yaml`                               | prod services + `haproxy` ingress + `app` + `migrate`                                 |
+| `pnpm docker:dev:setup`    | `compose.yaml` + `compose.dev.yaml` + `setup` profile                                        | all one-shot setup services for the dev stack                                         |
+| `pnpm docker:prod`         | `compose.yaml` + `compose.prod.yaml`                                                         | `postgres` (prod), `inngest` (prod), `redis`, `o2`, `rustfs`, `drizzle-gateway`       |
+| `pnpm docker:prod:setup`   | `compose.yaml` + `compose.prod.yaml` + `compose.prod.app.yaml` + `setup` profile             | all one-shot setup services for the production app stack                              |
+| `pnpm docker:prod:app`     | `compose.yaml` + `compose.prod.yaml` + `compose.prod.app.yaml`                               | prod services + `haproxy` ingress + `app`                                             |
 | `pnpm docker:prod:app:tls` | `compose.yaml` + `compose.prod.yaml` + `compose.prod.app.yaml` + `compose.prod.app.tls.yaml` | app stack + TLS ingress override on port `443`                                        |
 
 > [!NOTE]
@@ -213,8 +233,12 @@ flowchart TD
 
 ```bash
 # Run dev services (compose.yaml + compose.dev.yaml):
-# postgres, inngest (dev mode), o2
+# postgres, inngest (dev mode), o2, rustfs
 pnpm docker:dev
+
+# Run all one-shot setup services after the stack is healthy.
+# Only needs to be done once per stack.
+pnpm docker:dev:setup
 
 # Run the Vite dev server for SvelteKit.
 pnpm dev
@@ -235,13 +259,17 @@ node --env-file=.env build/index.js
 
 ```bash
 # Or, spin up production internal services (compose.yaml + compose.prod.yaml):
-# postgres (prod), inngest (prod mode), redis, o2, drizzle-gateway
+# postgres (prod), inngest (prod mode), redis, o2, rustfs, drizzle-gateway
 pnpm docker:prod
+
+# Run all one-shot setup services after the stack is healthy.
+# Should be run once per redeployment.
+pnpm docker:prod:setup
 ```
 
 ```bash
 # Or, spin up full production environment (+ compose.prod.app.yaml):
-# prod services + HAProxy ingress + app + migrate
+# prod services + HAProxy ingress + app
 # SCHEME=http uses port 80 only
 pnpm docker:prod:app
 ```

@@ -8,7 +8,10 @@ services:
     pull_policy: build
     build: ./docker/haproxy
     ports:
-      - 80:80
+      - host_ip: 0.0.0.0
+        published: 80
+        target: 80
+        protocol: tcp
     environment:
       HOST: ${HOST:?required}
       SCHEME: ${SCHEME:?required}
@@ -32,11 +35,13 @@ services:
     networks:
       - durability
 
-  migrate:
+  setup-database:
     pull_policy: build
     build:
       context: .
       target: migrate
+    profiles:
+      - setup
     environment:
       POSTGRES_URL: postgresql://postgres:${POSTGRES_PASSWORD:?required}@postgres:5432/postgres
     volumes:
@@ -95,12 +100,16 @@ services:
       - database
       - durability
       - edge
+      - storage
       - telemetry
     depends_on:
       postgres:
         condition: service_healthy
         required: true
       inngest:
+        condition: service_healthy
+        required: true
+      o2:
         condition: service_healthy
         required: true
     restart: always
