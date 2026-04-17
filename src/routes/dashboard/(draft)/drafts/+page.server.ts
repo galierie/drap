@@ -1,7 +1,8 @@
 import * as v from 'valibot';
 import { decode } from 'decode-formdata';
 import { error, redirect } from '@sveltejs/kit';
-import { count, isNull, sql } from 'drizzle-orm';
+import { isNull, sql } from 'drizzle-orm';
+import { index, rollup, sum as d3sum } from 'd3-array';
 
 import * as schema from '$lib/server/database/schema';
 import { assertSingle } from '$lib/server/assert';
@@ -157,8 +158,8 @@ async function initDraft(db: DrizzleTransaction, maxRounds: number, registration
 }
 
 async function getDraftStatsAggregates(db: DbConnection) {
-  return await tracer.asyncSpan('get-draft-stats-aggregates', async span => {
-    const statsByDraft = await db
+  return await tracer.asyncSpan('get-draft-stats-aggregates', async () => {
+    const draftYears = await db
       .select({
         draftId: schema.draft.id,
         year: sql<number>`extract(year from lower(${schema.draft.activePeriod}))`.as('year'),
@@ -166,16 +167,15 @@ async function getDraftStatsAggregates(db: DbConnection) {
       .from(schema.draft)
       .where(sql`upper(${schema.draft.activePeriod}) is not null`);
 
-    if (statsByDraft.length === 0) return [];
+    if (draftYears.length === 0) return [];
 
     const quotaSnapshots = await db
       .select({
         draftId: schema.draftLabQuota.draftId,
         labId: schema.draftLabQuota.labId,
         labName: schema.lab.name,
-        initialQuota: schema.draftLabQuota.initialQuota,
-        lotteryQuota: schema.draftLabQuota.lotteryQuota,
-        deletedAt: schema.lab.deletedAt,
+        quota: sql<number>`${schema.draftLabQuota.initialQuota} + ${schema.draftLabQuota.lotteryQuota}`.as('quota'),
+        archivedAt: schema.lab.deletedAt,
       })
       .from(schema.draftLabQuota)
       .innerJoin(schema.lab, sql`${schema.draftLabQuota.labId} = ${schema.lab.id}`);
@@ -184,19 +184,20 @@ async function getDraftStatsAggregates(db: DbConnection) {
       .select({
         draftId: schema.facultyChoiceUser.draftId,
         labId: schema.facultyChoiceUser.labId,
-        count: count(schema.facultyChoiceUser.studentUserId),
+        count: sql<number>`count(${schema.facultyChoiceUser.studentUserId})`,
       })
       .from(schema.facultyChoiceUser)
       .groupBy(schema.facultyChoiceUser.draftId, schema.facultyChoiceUser.labId);
 
+    const draftYearMap = index(draftYears, d => d.draftId.toString());
     const quotaByDraftLab = index(
       quotaSnapshots.map(q => ({
         draftId: q.draftId.toString(),
         labId: q.labId,
         labName: q.labName,
-        quota: q.initialQuota + q.lotteryQuota,
-        isArchived: q.deletedAt !== null,
-        archivedAt: q.deletedAt,
+        quota: Number(q.quota),
+        isArchived: q.archivedAt !== null,
+        archivedAt: q.archivedAt,
       })),
       q => `${q.draftId}-${q.labId}`,
     );
@@ -205,60 +206,53 @@ async function getDraftStatsAggregates(db: DbConnection) {
       draftedCounts.map(d => ({
         draftId: d.draftId.toString(),
         labId: d.labId,
-        count: d.count,
+        count: Number(d.count),
       })),
       d => `${d.draftId}-${d.labId}`,
     );
 
-    const draftYear = index(statsByDraft, d => d.draftId.toString());
+    const years = [...new Set(draftYears.map(d => d.year))].sort();
 
-    const groupedByYear = rollup(
-      statsByDraft,
-      drafts => drafts,
-      d => d.year,
-    );
+    return years.map(year => {
+      const yearDrafts = draftYears.filter(d => d.year === year);
+      const labsMap = new Map<string, {
+        labId: string;
+        labName: string;
+        isArchived: boolean;
+        archivedAt: Date | null;
+        quota: number;
+        draftedStudents: number;
+      }>();
 
-    return Array.from(groupedByYear.entries())
-      .sort(([a], [b]) => a - b)
-      .map(([year, drafts]) => {
-        const labs = new Map<string, {
-          labId: string;
-          labName: string;
-          isArchived: boolean;
-          archivedAt: Date | null;
-          quota: number;
-          draftedStudents: number;
-        }>();
+      for (const draft of yearDrafts) {
+        const draftId = draft.draftId.toString();
+        for (const [key, quotaData] of quotaByDraftLab) {
+          if (!key.startsWith(`${draftId}-`)) continue;
+          const labId = quotaData.labId;
+          const draftedData = draftedByDraftLab.get(`${draftId}-${labId}`);
 
-        for (const draft of drafts) {
-          const draftId = draft.draftId.toString();
-          for (const [key, quotaData] of quotaByDraftLab) {
-            if (!key.startsWith(`${draftId}-`)) continue;
-            const labId = quotaData.labId;
-            const draftedData = draftedByDraftLab.get(`${draftId}-${labId}`);
-
-            if (!labs.has(labId)) {
-              labs.set(labId, {
-                labId,
-                labName: quotaData.labName,
-                isArchived: quotaData.isArchived,
-                archivedAt: quotaData.archivedAt,
-                quota: 0,
-                draftedStudents: 0,
-              });
-            }
-
-            const lab = labs.get(labId)!;
-            lab.quota += quotaData.quota;
-            lab.draftedStudents += draftedData?.count ?? 0;
+          if (!labsMap.has(labId)) {
+            labsMap.set(labId, {
+              labId,
+              labName: quotaData.labName,
+              isArchived: quotaData.isArchived,
+              archivedAt: quotaData.archivedAt,
+              quota: 0,
+              draftedStudents: 0,
+            });
           }
-        }
 
-        return {
-          year,
-          labs: Array.from(labs.values()),
-          totalDrafted: Array.from(labs.values()).reduce((sum, l) => sum + l.draftedStudents, 0),
-        };
-      });
+          const lab = labsMap.get(labId)!;
+          lab.quota += quotaData.quota;
+          lab.draftedStudents += draftedData?.count ?? 0;
+        }
+      }
+
+      return {
+        year,
+        labs: Array.from(labsMap.values()),
+        totalDrafted: Array.from(labsMap.values()).reduce((sum, l) => sum + l.draftedStudents, 0),
+      };
+    });
   });
 }
