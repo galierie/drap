@@ -1,9 +1,18 @@
 <script lang="ts">
-  import { DraftTable, InitDialog } from '$lib/features/drafts';
+  import { DraftTable, InitDialog, StatsChart } from '$lib/features/drafts';
+  import { buildDraftStatsChartData } from './stats';
 
   const { data } = $props();
-  const { drafts } = $derived(data);
+  const { drafts, labs, draftStatsByYear } = $derived(data);
   const [latestDraft] = $derived(drafts);
+
+  const chartData = $derived.by(() => {
+    if (!draftStatsByYear) return Promise.resolve(null);
+    return draftStatsByYear.then(stats => {
+      if (!stats) return null;
+      return buildDraftStatsChartData(stats, labs);
+    });
+  });
 </script>
 
 <div class="space-y-6">
@@ -18,4 +27,5 @@
     {/if}
   </div>
   <DraftTable {drafts} />
+  <StatsChart stats={chartData} {labs} />
 </div>

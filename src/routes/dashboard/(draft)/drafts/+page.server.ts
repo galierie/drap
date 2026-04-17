@@ -2,7 +2,7 @@ import * as v from 'valibot';
 import { decode } from 'decode-formdata';
 import { error, redirect } from '@sveltejs/kit';
 import { isNull, sql } from 'drizzle-orm';
-import { index, rollup, sum as d3sum } from 'd3-array';
+import { index } from 'd3-array';
 
 import * as schema from '$lib/server/database/schema';
 import { assertSingle } from '$lib/server/assert';
@@ -189,7 +189,6 @@ async function getDraftStatsAggregates(db: DbConnection) {
       .from(schema.facultyChoiceUser)
       .groupBy(schema.facultyChoiceUser.draftId, schema.facultyChoiceUser.labId);
 
-    const draftYearMap = index(draftYears, d => d.draftId.toString());
     const quotaByDraftLab = index(
       quotaSnapshots.map(q => ({
         draftId: q.draftId.toString(),
