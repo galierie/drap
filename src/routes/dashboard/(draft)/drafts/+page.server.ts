@@ -162,7 +162,9 @@ async function getDraftStatsAggregates(db: DbConnection) {
     const draftYears = await db
       .select({
         draftId: schema.draft.id,
-        year: sql<number>`extract(year from lower(${schema.draft.activePeriod}))`.mapWith(coerceNumber).as('year'),
+        year: sql<number>`extract(year from lower(${schema.draft.activePeriod}))`
+          .mapWith(coerceNumber)
+          .as('year'),
       })
       .from(schema.draft)
       .where(sql`upper(${schema.draft.activePeriod}) is not null`);
