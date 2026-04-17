@@ -137,3 +137,33 @@ export interface DraftLabBordaScore {
   labId: string;
   bordaScore: number;
 }
+
+export interface DraftStatsLabEntry {
+  labId: string;
+  labName: string;
+  isArchived: boolean;
+  archivedAt: Date | null;
+  quota: number;
+  draftedStudents: number;
+}
+
+export interface DraftStatsYear {
+  year: number;
+  labs: DraftStatsLabEntry[];
+  totalDrafted: number;
+}
+
+export interface DraftStatsSeries {
+  labId: string;
+  labName: string;
+  isArchived: boolean;
+  color: string;
+  points: { year: number; value: number | null }[];
+}
+
+export interface DraftStatsChartData {
+  years: number[];
+  series: DraftStatsSeries[];
+  quotaSeries: DraftStatsSeries[];
+  draftedSeries: DraftStatsSeries[];
+}
