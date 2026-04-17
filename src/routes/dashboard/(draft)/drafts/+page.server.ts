@@ -58,7 +58,7 @@ export async function load({ locals: { session } }) {
     return {
       drafts,
       labs,
-      draftStatsByYear: getDraftStatsAggregates(db).catch(() => null),
+      draftStatsByYear: getDraftStatsAggregates(db),
     };
   });
 }
