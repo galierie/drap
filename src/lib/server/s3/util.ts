@@ -19,6 +19,7 @@ export function normalizeImageContentType(contentType: string) {
   switch (canonicalContentType) {
     case 'image/jpeg':
     case 'image/png':
+    case 'image/svg+xml':
     case 'image/webp':
       return canonicalContentType;
     default:
@@ -70,10 +71,15 @@ export class S3RemoteHostError extends Error {
  * @throws {S3RemoteProtocolError}
  * @throws {S3RemoteHostError}
  */
-export function assertSecureGoogleCdnUrl(avatarUrl: string) {
+export function assertSecureCdnUrl(avatarUrl: string) {
   const url = new URL(avatarUrl);
   if (url.protocol !== 'https:') throw new S3RemoteProtocolError(url.protocol);
-  if (getDomain(url.hostname) !== 'googleusercontent.com')
-    throw new S3RemoteHostError(url.hostname);
+  if (url.hostname !== 'avatar.vercel.sh')
+    switch (getDomain(url.hostname)) {
+      case 'googleusercontent.com':
+        break;
+      default:
+        throw new S3RemoteHostError(url.hostname);
+    }
   return url;
 }

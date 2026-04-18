@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   assertPayloadSize,
-  assertSecureGoogleCdnUrl,
+  assertSecureCdnUrl,
   normalizeImageContentType,
   S3ContentTypeError,
   S3EmptyPayloadError,
@@ -46,14 +46,8 @@ describe('normalizeImageContentType', () => {
     }
   });
 
-  it('rejects unsupported image formats even when they look image-like', () => {
-    try {
-      normalizeImageContentType('image/svg+xml; charset=UTF-8');
-      throw new Error('expected normalizeImageContentType to throw');
-    } catch (error) {
-      const typedError = expectError(error, S3ContentTypeError);
-      expect(typedError.contentType).toBe('image/svg+xml; charset=UTF-8');
-    }
+  it('accepts SVG images with parameters', () => {
+    expect(normalizeImageContentType('image/svg+xml; charset=UTF-8')).toBe('image/svg+xml');
   });
 });
 
@@ -98,13 +92,20 @@ describe('assertPayloadSize', () => {
 
 describe('assertSecureGoogleCdnUrl', () => {
   it('accepts secure googleusercontent hosts', () => {
-    const url = assertSecureGoogleCdnUrl('https://lh3.googleusercontent.com/avatar.png');
+    const url = assertSecureCdnUrl('https://lh3.googleusercontent.com/avatar.png');
 
     expect(url.hostname).toBe('lh3.googleusercontent.com');
   });
 
+  it('accepts secure Vercel avatar hosts', () => {
+    const url = assertSecureCdnUrl('https://avatar.vercel.sh/drap.svg');
+
+    expect(url.hostname).toBe('avatar.vercel.sh');
+    expect(url.pathname).toBe('/drap.svg');
+  });
+
   it('accepts secure googleusercontent hosts with mixed-case input', () => {
-    const url = assertSecureGoogleCdnUrl('https://LH3.GoogleUserContent.com/avatar.png?size=256');
+    const url = assertSecureCdnUrl('https://LH3.GoogleUserContent.com/avatar.png?size=256');
 
     expect(url.hostname).toBe('lh3.googleusercontent.com');
     expect(url.searchParams.get('size')).toBe('256');
@@ -112,7 +113,7 @@ describe('assertSecureGoogleCdnUrl', () => {
 
   it('rejects non-https URLs', () => {
     try {
-      assertSecureGoogleCdnUrl('http://lh3.googleusercontent.com/avatar.png');
+      assertSecureCdnUrl('http://lh3.googleusercontent.com/avatar.png');
       throw new Error('expected assertSecureGoogleCdnUrl to throw');
     } catch (error) {
       const typedError = expectError(error, S3RemoteProtocolError);
@@ -122,7 +123,7 @@ describe('assertSecureGoogleCdnUrl', () => {
 
   it('rejects disallowed hosts', () => {
     try {
-      assertSecureGoogleCdnUrl('https://example.com/avatar.png');
+      assertSecureCdnUrl('https://example.com/avatar.png');
       throw new Error('expected assertSecureGoogleCdnUrl to throw');
     } catch (error) {
       const typedError = expectError(error, S3RemoteHostError);
@@ -131,14 +132,14 @@ describe('assertSecureGoogleCdnUrl', () => {
   });
 
   it('accepts googleusercontent subdomains by registrable domain', () => {
-    const url = assertSecureGoogleCdnUrl('https://foo.bar.googleusercontent.com/avatar.png');
+    const url = assertSecureCdnUrl('https://foo.bar.googleusercontent.com/avatar.png');
 
     expect(url.hostname).toBe('foo.bar.googleusercontent.com');
   });
 
   it('rejects sibling domains that only share a suffix', () => {
     try {
-      assertSecureGoogleCdnUrl('https://googleusercontent.com.example.com/avatar.png');
+      assertSecureCdnUrl('https://googleusercontent.com.example.com/avatar.png');
       throw new Error('expected assertSecureGoogleCdnUrl to throw');
     } catch (error) {
       const typedError = expectError(error, S3RemoteHostError);
@@ -148,7 +149,7 @@ describe('assertSecureGoogleCdnUrl', () => {
 
   it('rejects lookalike registrable domains', () => {
     try {
-      assertSecureGoogleCdnUrl('https://googleusercontent.co/avatar.png');
+      assertSecureCdnUrl('https://googleusercontent.co/avatar.png');
       throw new Error('expected assertSecureGoogleCdnUrl to throw');
     } catch (error) {
       const typedError = expectError(error, S3RemoteHostError);
@@ -157,6 +158,6 @@ describe('assertSecureGoogleCdnUrl', () => {
   });
 
   it('propagates malformed URLs before host checks run', () => {
-    expect(() => assertSecureGoogleCdnUrl('not a url')).toThrow(TypeError);
+    expect(() => assertSecureCdnUrl('not a url')).toThrow(TypeError);
   });
 });

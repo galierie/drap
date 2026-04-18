@@ -27,7 +27,7 @@ import {
 } from '$lib/server/s3/util';
 import { Tracer } from '$lib/server/telemetry/tracer';
 import {
-  uploadDraftAvatarFromGoogleProfile,
+  uploadDraftAvatarFromCdn,
   uploadDraftAvatarOverride,
 } from '$lib/server/s3/draft-student-avatar';
 
@@ -331,7 +331,7 @@ export const actions = {
               if (typeof avatar === 'string') {
                 logger.info('user explicitly opted in for default Google avatar');
                 assert(user.avatarUrl.length > 0, 'missing google avatar URL');
-                await uploadDraftAvatarFromGoogleProfile(objectKey, user.avatarUrl, fetch);
+                await uploadDraftAvatarFromCdn(objectKey, user.avatarUrl, fetch);
               } else {
                 logger.info('user explicitly opted in for custom avatar');
                 await uploadDraftAvatarOverride(objectKey, avatar);
@@ -345,7 +345,9 @@ export const actions = {
       } catch (error) {
         if (error instanceof S3ContentTypeError) {
           logger.fatal(error.message, void 0, { 'avatar.content_type': error.contentType });
-          return actionFailure(415, { message: 'Avatar must be a JPEG, PNG, or WebP image.' });
+          return actionFailure(415, {
+            message: 'Avatar must be a JPEG, PNG, WebP, or SVG image.',
+          });
         } else if (error instanceof S3EmptyPayloadError) {
           logger.fatal(error.message);
           return actionFailure(400, { message: 'Avatar file is empty.' });

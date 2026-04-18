@@ -2,7 +2,7 @@ import assert, { strictEqual } from 'node:assert/strict';
 
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 
-import { assertPayloadSize, assertSecureGoogleCdnUrl, normalizeImageContentType } from './util';
+import { assertPayloadSize, assertSecureCdnUrl, normalizeImageContentType } from './util';
 import { s3 } from './client';
 
 const MAX_AVATAR_BYTES = 4 * 1024 * 1024;
@@ -43,12 +43,12 @@ export async function deleteDraftAvatarObject(objectKey: string) {
   );
 }
 
-export async function uploadDraftAvatarFromGoogleProfile(
+export async function uploadDraftAvatarFromCdn(
   objectKey: string,
   avatarUrl: string,
   http: typeof fetch,
 ) {
-  const url = assertSecureGoogleCdnUrl(avatarUrl);
+  const url = assertSecureCdnUrl(avatarUrl);
   const response = await http(url);
   assert(response.ok, `failed to download google avatar: ${response.status}`);
 
