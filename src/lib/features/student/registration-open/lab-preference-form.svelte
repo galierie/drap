@@ -24,6 +24,7 @@
   import { TextArea } from '$lib/components/ui/textarea';
   import { Tooltip, TooltipContent, TooltipTrigger } from '$lib/components/ui/tooltip';
 
+  import AvatarConsent from './avatar-consent.svelte';
   import { DebouncedMirror } from './debounced-mirror.svelte';
 
   interface Props {
@@ -109,6 +110,7 @@
 
 <form
   method="post"
+  enctype="multipart/form-data"
   action="/dashboard/student/?/submit"
   class="space-y-4"
   use:enhance={({ submitter, cancel }) => {
@@ -175,7 +177,8 @@
   <p>
     Select your preferred labs from the list of available labs and rank them by order of preference.
   </p>
-  <div class="mt-8 grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+  <AvatarConsent avatarUrl={user.avatarUrl} />
+  <div class="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
     <Card.Root variant="soft" class="flex h-full">
       <Card.Header>
         <Card.Title class="text-2xl">Available Labs</Card.Title>
