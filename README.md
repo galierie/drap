@@ -88,6 +88,8 @@ For host-run app processes, `pnpm docker:dev` already starts PostgreSQL, Inngest
 | `DRAP_ENCRYPTION_KEY`         | Encrypts sensitive OAuth tokens.            | Yes          | Generate with `pnpm random:bytes -- 32`.                                                                  |
 | `DRAP_ASSERT_DOMAIN`          | Allowed email-domain restriction.           | No           | `up.edu.ph` for production-like behavior.                                                                 |
 | `DRAP_ENABLE_EMAILS`          | Real email delivery.                        | No           | Leave unset unless you intentionally want live email delivery.                                            |
+| `S3_ENDPOINT`                 | App-facing S3 API endpoint.                 | Yes          | `http://localhost:9000` for host-run local development; do not use the Docker network hostname here.      |
+| `S3_REGION`                   | S3 signing region.                          | Yes          | `us-east-1` for local development.                                                                        |
 | `INNGEST_DEV`                 | Host-run app access to local Inngest.       | Yes          | `http://localhost:8288`; the server itself is provided by `pnpm docker:dev`.                              |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Local OpenTelemetry export endpoint.        | No           | `http://localhost:5080/api/default`; OpenObserve is provided by `pnpm docker:dev`.                        |
 | `OTEL_EXPORTER_OTLP_HEADERS`  | Local OpenTelemetry auth headers.           | No           | `Authorization=Basic%20YWRtaW5AZXhhbXBsZS5jb206cGFzc3dvcmQ%3D`; credentials come from `compose.dev.yaml`. |
@@ -110,13 +112,14 @@ For `pnpm docker:prod:app`, Compose derives the canonical origin from `SCHEME` a
 | `INNGEST_EVENT_KEY`          | Inngest event signing.                      | Yes          | Production event key from Inngest.                           |
 | `INNGEST_SIGNING_KEY`        | Inngest webhook signing.                    | Yes          | Production signing key from Inngest.                         |
 | `OTEL_EXPORTER_OTLP_HEADERS` | OpenTelemetry auth headers.                 | Yes          | Percent-encoded Basic auth for your OpenObserve credentials. |
+| `S3_REGION`                  | S3 signing region.                          | Yes          | Use the same region configured for the backing object store. |
 | `S3_ACCESS_KEY`              | RustFS root access key.                     | Yes          | Generate with `pnpm random:bytes -- 24`.                     |
 | `S3_SECRET_KEY`              | RustFS root secret key.                     | Yes          | Generate with `pnpm random:bytes -- 48`.                     |
 | `ZO_ROOT_USER_EMAIL`         | OpenObserve bootstrap admin user.           | Yes          | Dedicated admin email address.                               |
 | `ZO_ROOT_USER_PASSWORD`      | OpenObserve bootstrap admin password.       | Yes          | Use a strong random secret.                                  |
 | `DRIZZLE_MASTERPASS`         | Drizzle Gateway admin password.             | Yes          | Use a strong random secret.                                  |
 
-`pnpm docker:prod:app` already injects `POSTGRES_URL`, `DRAP_ASSERT_DOMAIN`, `DRAP_ENABLE_EMAILS`, `INNGEST_BASE_URL`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_PROTOCOL`, `ADDRESS_HEADER`, and `XFF_DEPTH` internally.
+`pnpm docker:prod:app` already injects `POSTGRES_URL`, `DRAP_ASSERT_DOMAIN`, `DRAP_ENABLE_EMAILS`, `INNGEST_BASE_URL`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_PROTOCOL`, `ADDRESS_HEADER`, `XFF_DEPTH`, and the internal `S3_ENDPOINT` internally.
 
 One-shot setup services live behind the Compose `setup` profile so they do not interfere with `docker compose up --wait`. Use `pnpm docker:dev:setup:bucket` or `pnpm docker:prod:setup:bucket` to bootstrap the RustFS bucket after the long-running services are healthy.
 
