@@ -55,6 +55,7 @@
     "devalue": "^5.7.1",
     "drizzle-orm": "^0.45.2",
     "email-addresses": "^5.0.0",
+    "get-stream": "^9.0.1",
     "http-parser-js": "^0.5.10",
     "http-raw-request": "^2.0.2",
     "inngest": "^4.2.1",
