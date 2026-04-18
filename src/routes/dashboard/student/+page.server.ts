@@ -5,6 +5,7 @@ import { and, asc, eq, isNotNull, lt, sql } from 'drizzle-orm';
 import { decode } from 'decode-formdata';
 import { enumerate, izip } from 'itertools';
 import { error, fail as actionFailure, redirect } from '@sveltejs/kit';
+import { MaxBufferError } from 'get-stream';
 
 import * as schema from '$lib/server/database/schema';
 import { assertOptional, assertSingle } from '$lib/server/assert';
@@ -356,7 +357,7 @@ export const actions = {
             'avatar.actual_size': error.size,
             'avatar.max_size': error.maxBytes,
           });
-          return actionFailure(413, { message: 'Avatar file is too large.' });
+          return actionFailure(413, { message: 'Uploaded avatar file is too large.' });
         } else if (error instanceof S3RemoteProtocolError) {
           logger.fatal(error.message, void 0, { 'avatar.protocol': error.protocol });
           return actionFailure(400, {
@@ -367,6 +368,9 @@ export const actions = {
           return actionFailure(400, {
             message: 'Your Google profile photo URL is not supported.',
           });
+        } else if (error instanceof MaxBufferError) {
+          logger.fatal(error.message);
+          return actionFailure(413, { message: 'Remote avatar file is too large.' });
         }
         throw error;
       }

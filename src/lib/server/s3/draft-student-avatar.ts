@@ -1,6 +1,8 @@
-import assert, { strictEqual } from 'node:assert/strict';
+import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
 
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getStreamAsBuffer } from 'get-stream';
 
 import { assertPayloadSize, assertSecureCdnUrl, normalizeImageContentType } from './util';
 import { s3 } from './client';
@@ -8,11 +10,7 @@ import { s3 } from './client';
 const MAX_AVATAR_BYTES = 4 * 1024 * 1024;
 const DRAFT_AVATAR_BUCKET = 'draft-student-avatar';
 
-async function putDraftAvatarObject(
-  objectKey: string,
-  contentType: string,
-  bytes: Uint8Array<ArrayBuffer>,
-) {
+async function putDraftAvatarObject(objectKey: string, contentType: string, bytes: Buffer) {
   const normalizedContentType = normalizeImageContentType(contentType);
   assertPayloadSize(bytes.byteLength, MAX_AVATAR_BYTES);
   await s3.send(
@@ -50,21 +48,21 @@ export async function uploadDraftAvatarFromCdn(
 ) {
   const url = assertSecureCdnUrl(avatarUrl);
   const response = await http(url);
-  assert(response.ok, `failed to download google avatar: ${response.status}`);
+  assert(response.ok, `failed to download avatar: ${response.status}`);
 
   const contentType = response.headers.get('Content-Type');
-  assert(contentType !== null, 'google avatar response missing content type');
+  assert(contentType !== null, 'avatar response missing content type');
   const normalizedContentType = normalizeImageContentType(contentType);
 
   const contentLength = response.headers.get('Content-Length');
-  assert(contentLength !== null, 'google avatar response missing content length');
+  if (contentLength !== null) {
+    // Some CDNs don't return `Content-Length`, so this assertion is mainly advisory.
+    const expectedSize = Number.parseInt(contentLength, 10);
+    assertPayloadSize(expectedSize, MAX_AVATAR_BYTES);
+  }
 
-  const expectedSize = Number.parseInt(contentLength, 10);
-  assertPayloadSize(expectedSize, MAX_AVATAR_BYTES);
-
-  const bytes = await response.bytes();
-  strictEqual(bytes.byteLength, expectedSize, 'google avatar response content length mismatch');
-
+  assert(response.body !== null, 'avatar response body is null');
+  const bytes = await getStreamAsBuffer(response.body, { maxBuffer: MAX_AVATAR_BYTES });
   await putDraftAvatarObject(objectKey, normalizedContentType, bytes);
 }
 
@@ -72,6 +70,6 @@ export async function uploadDraftAvatarOverride(objectKey: string, file: File) {
   const normalizedContentType = normalizeImageContentType(file.type);
   assertPayloadSize(file.size, MAX_AVATAR_BYTES);
 
-  const bytes = new Uint8Array(await file.arrayBuffer());
+  const bytes = Buffer.from(await file.arrayBuffer());
   await putDraftAvatarObject(objectKey, normalizedContentType, bytes);
 }
