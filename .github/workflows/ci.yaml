@@ -82,6 +82,9 @@ jobs:
       - name: Start Docker Services
         run: pnpm docker:dev:ci
 
+      - name: Bootstrap RustFS Bucket
+        run: pnpm docker:dev:setup:bucket
+
       - name: Run Database Migrations
         run: pnpm db:migrate
 
