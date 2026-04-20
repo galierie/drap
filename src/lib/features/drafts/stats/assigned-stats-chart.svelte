@@ -28,7 +28,8 @@
         },
   );
 
-  const integerFormat = format('d');
+  const axisPercentFormat = format('.0%');
+  const tooltipPercentFormat = format('.1~%');
   const yearFormat = format('d');
 </script>
 
@@ -37,10 +38,10 @@
 >
   <Card.Header>
     <div class="space-y-1.5">
-      <Card.Title>Yearly Assigned Students per Lab</Card.Title>
+      <Card.Title>Yearly Assigned Student Share per Lab</Card.Title>
       <Card.Description>
-        Actual draft results by lab over time. Use the legend to focus on specific labs. Missing
-        years terminate each lab&apos;s line.
+        Share of assigned students by lab for each draft year. Use the legend to focus on specific
+        labs. Missing years terminate each lab&apos;s line.
       </Card.Description>
     </div>
   </Card.Header>
@@ -70,14 +71,17 @@
           },
           yAxis: {
             ticks: 4,
-            format: integerFormat,
+            format: axisPercentFormat,
             motion: axisMotion,
             tickLabelProps: { dx: -8 },
           },
         }}
       >
         {#snippet tooltip()}
-          <Chart.Tooltip indicator="dot" />
+          <Chart.Tooltip
+            indicator="dot"
+            valueFormatter={value => tooltipPercentFormat(Number(value))}
+          />
         {/snippet}
       </LineChart>
     </Chart.Container>

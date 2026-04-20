@@ -63,12 +63,12 @@ describe('buildAssignedStatsChart', () => {
 
     expect(row2024).toMatchObject({
       year: 2024,
-      csl: 3,
-      ndsl: 3,
+      csl: 0.5,
+      ndsl: 0.5,
       acl: 0,
     });
 
-    expect(chart.maxValue).toBe(4);
+    expect(chart.maxValue).toBe(1);
   });
 
   test('fills missing lab-year values with null instead of zero', () => {
@@ -78,7 +78,7 @@ describe('buildAssignedStatsChart', () => {
     expect(row2025).toMatchObject({
       year: 2025,
       csl: null,
-      ndsl: 4,
+      ndsl: 1,
       acl: null,
     });
   });
@@ -98,6 +98,24 @@ describe('buildAssignedStatsChart', () => {
       expect.objectContaining({ year: 2024, acl: 0 }),
       expect.objectContaining({ year: 2025, acl: null }),
     ]);
+  });
+
+  test('normalizes each year to that year total assigned students', () => {
+    const chart = buildAssignedStatsChart(records);
+    const row2024 = chart.data.find(({ year }) => year === 2024);
+
+    expect(row2024).toMatchObject({
+      year: 2024,
+      csl: 0.5,
+      ndsl: 0.5,
+      acl: 0,
+    });
+  });
+
+  test('uses the highest normalized share as the chart max when no year reaches 100%', () => {
+    const chart = buildAssignedStatsChart([records[0], records[1], records[2], records[5]]);
+
+    expect(chart.maxValue).toBe(0.5);
   });
 
   test('uses uppercase lab ids for legend labels and chart config labels', () => {

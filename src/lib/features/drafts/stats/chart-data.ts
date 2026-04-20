@@ -52,7 +52,20 @@ function buildMetricChartView(
 ): DraftStatsMetricChartView {
   const data: DraftStatsChartDatum[] = years.map(year => {
     const point: DraftStatsChartDatum = { year };
+    const yearTotal =
+      sum(
+        labs.map(lab => {
+          const value = aggregates.get(year)?.get(lab.id)?.[metric];
+          return typeof value === 'undefined' ? 0 : value;
+        }),
+      ) ?? 0;
+
     for (const lab of labs) point[lab.id] = aggregates.get(year)?.get(lab.id)?.[metric] ?? null;
+    for (const lab of labs) {
+      const value = point[lab.id];
+      if (typeof value !== 'number') continue;
+      point[lab.id] = yearTotal === 0 ? 0 : value / yearTotal;
+    }
     return point;
   });
 
@@ -77,7 +90,7 @@ function buildMetricChartView(
       color: lab.color,
     })),
     data,
-    maxValue: Math.max(maxValue, 1),
+    maxValue: Math.max(maxValue, 0.01),
   };
 }
 
