@@ -204,12 +204,20 @@ async function expectChartTooltipPoint(
 
   await chart.locator('.draft-rounds-chart-point').nth(pointIndex).hover({ force: true });
 
-  await expect(tooltip).toContainText(expected.label);
-  await expect(tooltip.locator('.text-muted-foreground')).toHaveText(expected.metric);
-  await expect(tooltip.locator('.font-mono')).toHaveText(String(expected.value));
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toHaveText(
+    new RegExp(
+      `${escapeRegex(expected.label)}\\s+${escapeRegex(expected.metric)}\\s+${escapeRegex(expected.value.toString())}`,
+      'u',
+    ),
+  );
 
   for (const metric of expected.hiddenMetrics ?? [])
-    await expect(tooltip.getByText(metric, { exact: true })).not.toBeVisible();
+    await expect(tooltip.getByText(metric, { exact: true })).toHaveCount(0);
+}
+
+function escapeRegex(value: string) {
+  return value.replaceAll(/[.*+?^${}()|[\]\\]/gu, '\\$&');
 }
 
 test.describe('Draft Lifecycle', () => {
@@ -2167,13 +2175,13 @@ test.describe('Draft Lifecycle', () => {
 
         await expect(chart).toContainText('Borda Score');
 
-        // d3-format('.0%') renders as "42%" etc.
+        // d3-format('.1~%') renders whole or fractional percentages such as "42%" or "37.5%".
         const scoreEl = chart.locator('.text-3xl');
-        await expect(scoreEl).toHaveText(/^\d+%$/u);
+        await expect(scoreEl).toHaveText(/^\d+(?:\.\d+)?%$/u);
 
         // Verify range 0–100%
         const scoreText = (await scoreEl.textContent())?.trim() ?? '';
-        const numeric = parseInt(scoreText.replace('%', ''), 10);
+        const numeric = Number.parseFloat(scoreText.replace('%', ''));
         expect(numeric).toBeGreaterThanOrEqual(0);
         expect(numeric).toBeLessThanOrEqual(100);
       });
