@@ -30,6 +30,8 @@
     metadata,
   }: Props = $props();
 
+  // `defaultOpen` seeds the initial state; user toggles persist afterwards even if the prop changes.
+  // svelte-ignore state_referenced_locally
   let open = $state(defaultOpen);
 </script>
 
