@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { mergeTests, type Page } from '@playwright/test';
 
 import * as schema from '$lib/server/database/schema';
@@ -11,6 +11,11 @@ import {
 
 import { testDatabase } from './database';
 import { testLabs } from './labs';
+
+// Placeholder ciphertexts for seeded candidate senders. The e2e suite never
+// actually dispatches email, so the encrypted OAuth tokens only need to
+// satisfy the NOT NULL constraints on `email.candidate_sender`.
+const DUMMY_BYTEA = Buffer.alloc(1);
 
 // Student fixtures with behavior-based names for E2E testing
 // Each student has a specific role in the draft lifecycle tests
@@ -783,8 +788,80 @@ const testAdmin = testDatabase.extend<{ adminPage: Page }, { adminUserId: string
   },
 });
 
+const testSecondAdmin = testDatabase.extend<
+  { secondAdminPage: Page },
+  { secondAdminUserId: string }
+>({
+  secondAdminUserId: [
+    async ({ database }, use) => {
+      const { id: userId } = await createTestUser(database, {
+        email: 'second.admin@up.edu.ph',
+        googleUserId: 'test-second-admin',
+        givenName: 'Second',
+        familyName: 'Administrator',
+        isAdmin: true,
+        labId: null,
+      });
+      await use(userId);
+    },
+    { scope: 'worker' },
+  ],
+  async secondAdminPage({ database, browser, secondAdminUserId }, use) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const sessionId = await insertDummySession(database, secondAdminUserId);
+    await context.addCookies([
+      {
+        name: 'sid',
+        value: sessionId,
+        domain: 'localhost',
+        path: '/dashboard',
+        httpOnly: true,
+        sameSite: 'Lax',
+      },
+    ]);
+    await page.goto('/dashboard/');
+    await use(page);
+    await deleteValidSession(database, sessionId);
+    await context.close();
+  },
+});
+
+// Seeds a candidate_sender row for the primary admin user. The admin user is
+// created elsewhere (see `testAdmin`) and looked up by email here to avoid
+// depending on the `testAdmin` fixture object, which would re-register
+// `adminPage` during `mergeTests` and break test-scoped page lifecycles.
+const testCandidateSender = testDatabase.extend<{ seededCandidateSender: string }>({
+  async seededCandidateSender({ database }, use) {
+    const [row] = await database
+      .select({ id: schema.user.id })
+      .from(schema.user)
+      .where(eq(schema.user.email, 'admin@up.edu.ph'))
+      .limit(1);
+    if (typeof row === 'undefined')
+      throw new Error('admin user must exist before seeding a candidate sender');
+    await database
+      .insert(schema.candidateSender)
+      .values({
+        userId: row.id,
+        scopes: ['https://www.googleapis.com/auth/gmail.send'],
+        expiredAt: sql`now() + interval '1 hour'`,
+        accessTokenIv: DUMMY_BYTEA,
+        accessTokenCipher: DUMMY_BYTEA,
+        refreshTokenIv: DUMMY_BYTEA,
+        refreshTokenCipher: DUMMY_BYTEA,
+      })
+      .onConflictDoNothing({ target: schema.candidateSender.userId });
+    await use(row.id);
+    // Cascade also removes the designated_sender row, if any.
+    await database.delete(schema.candidateSender).where(eq(schema.candidateSender.userId, row.id));
+  },
+});
+
 export const test = mergeTests(
   testAdmin,
+  testSecondAdmin,
+  testCandidateSender,
   testNdslHead,
   testCslHead,
   testSclHead,

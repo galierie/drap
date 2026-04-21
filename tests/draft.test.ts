@@ -266,6 +266,144 @@ test.describe('Draft Lifecycle', () => {
     });
   });
 
+  test.describe('Draft Administrators Card', () => {
+    test('legacy email dashboard route no longer resolves', async ({ adminPage }) => {
+      const response = await adminPage.goto('/dashboard/email/');
+      expect(response?.status()).toBe(404);
+    });
+
+    test('sidebar no longer shows an Email entry', async ({ adminPage }) => {
+      await adminPage.goto('/dashboard/');
+      await expect(adminPage.getByRole('link', { name: 'Email', exact: true })).toHaveCount(0);
+    });
+
+    test('users page renders the Draft Administrators card with a timeline', async ({
+      adminPage,
+    }) => {
+      await adminPage.goto('/dashboard/users/');
+      const card = adminPage.locator('#draft-admins');
+      await expect(card).toBeVisible();
+      await expect(card.getByText('Draft Administrators', { exact: true })).toBeVisible();
+      await expect(card.getByText('Volunteer Candidate Senders')).toBeVisible();
+      await expect(card.getByText('Designate a Sender')).toBeVisible();
+    });
+
+    test('admin sees the Volunteer button only on their own row', async ({
+      adminPage,
+      secondAdminUserId: _second,
+    }) => {
+      await adminPage.goto('/dashboard/users/#draft-admins');
+      const card = adminPage.locator('#draft-admins');
+      const volunteerButtons = card.getByRole('button', { name: 'Volunteer as Candidate Sender' });
+      await expect(volunteerButtons).toHaveCount(1);
+    });
+
+    test('hash anchor scrolls the Draft Administrators card into view', async ({ adminPage }) => {
+      await adminPage.goto('/dashboard/users/#draft-admins');
+      await expect(adminPage.locator('#draft-admins')).toBeInViewport();
+    });
+
+    test('draft layout warns destructively when no candidate senders exist', async ({
+      adminPage,
+    }) => {
+      await adminPage.goto('/dashboard/drafts/');
+      const callout = adminPage.locator('[role="alert"][data-variant="destructive"]');
+      await expect(callout).toBeVisible();
+      await expect(callout).toContainText(/volunteer a candidate sender/iu);
+    });
+  });
+
+  test.describe('Candidate Sender Actions', () => {
+    test('seeded candidate flips the draft callout to a warning', async ({
+      adminPage,
+      seededCandidateSender: _seeded,
+    }) => {
+      await adminPage.goto('/dashboard/drafts/');
+      const callout = adminPage.locator('[role="alert"][data-variant="warning"]');
+      await expect(callout).toBeVisible();
+      await expect(callout).toContainText(/promote a designated sender/iu);
+    });
+
+    test('promote flips row to Designated and callout to info', async ({
+      adminPage,
+      seededCandidateSender: _seeded,
+    }) => {
+      await adminPage.goto('/dashboard/users/#draft-admins');
+      const card = adminPage.locator('#draft-admins');
+      await expect(card.getByText('Candidate Sender', { exact: true })).toBeVisible();
+
+      await card.getByRole('button', { name: 'Promote', exact: true }).click();
+      await expect(card.getByText('Designated Sender', { exact: true })).toBeVisible();
+
+      await adminPage.goto('/dashboard/drafts/');
+      const callout = adminPage.locator('[role="alert"][data-variant="info"]');
+      await expect(callout).toBeVisible();
+      await expect(callout).toContainText(/currently designated email sender/iu);
+    });
+
+    test('demote reverts a Designated sender back to Candidate', async ({
+      adminPage,
+      seededCandidateSender: _seeded,
+    }) => {
+      await adminPage.goto('/dashboard/users/#draft-admins');
+      const card = adminPage.locator('#draft-admins');
+      await card.getByRole('button', { name: 'Promote', exact: true }).click();
+      await expect(card.getByText('Designated Sender', { exact: true })).toBeVisible();
+
+      await card.getByRole('button', { name: 'Demote', exact: true }).click();
+      await expect(card.getByText('Candidate Sender', { exact: true })).toBeVisible();
+    });
+
+    test('remove drops a Candidate back to the volunteer state', async ({
+      adminPage,
+      seededCandidateSender: _seeded,
+    }) => {
+      await adminPage.goto('/dashboard/users/#draft-admins');
+      const card = adminPage.locator('#draft-admins');
+      await expect(card.getByText('Candidate Sender', { exact: true })).toBeVisible();
+
+      await card.getByRole('button', { name: 'Remove', exact: true }).click();
+      await expect(card.getByText('Candidate Sender', { exact: true })).toHaveCount(0);
+      await expect(
+        card.getByRole('button', { name: 'Volunteer as Candidate Sender' }),
+      ).toBeVisible();
+    });
+
+    test('second admin can promote the first admin candidate', async ({
+      secondAdminPage,
+      seededCandidateSender: _seeded,
+    }) => {
+      await secondAdminPage.goto('/dashboard/users/#draft-admins');
+      const card = secondAdminPage.locator('#draft-admins');
+      await card.getByRole('button', { name: 'Promote', exact: true }).click();
+      await expect(card.getByText('Designated Sender', { exact: true })).toBeVisible();
+    });
+  });
+
+  test.describe('Candidate Sender Mobile Actions', () => {
+    test('Remove collapses into a kebab dropdown on xs viewports', async ({
+      adminPage,
+      seededCandidateSender: _seeded,
+    }) => {
+      await adminPage.setViewportSize({ width: 375, height: 667 });
+      await adminPage.goto('/dashboard/users/#draft-admins');
+      const card = adminPage.locator('#draft-admins');
+
+      const inlineRemove = card.getByRole('button', { name: 'Remove', exact: true });
+      await expect(inlineRemove).toBeHidden();
+
+      const kebab = card.getByRole('button', { name: 'More actions' });
+      await expect(kebab).toBeVisible();
+      await kebab.click();
+
+      const dropdownItem = adminPage.getByRole('menuitem', { name: 'Remove' });
+      await expect(dropdownItem).toBeVisible();
+      await dropdownItem.click();
+
+      await expect(card.getByText('Candidate Sender', { exact: true })).toHaveCount(0);
+    });
+  });
+
   test.describe('Student Profile Registration', () => {
     test('Eager lands on /dashboard/student/', async ({ eagerDrafteePage }) => {
       await expect(eagerDrafteePage).toHaveURL('/dashboard/student/');
