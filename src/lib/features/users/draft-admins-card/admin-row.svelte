@@ -19,24 +19,12 @@
   import VolunteerButton from './volunteer-button.svelte';
 
   const { user, isSelf, role }: Props = $props();
-
-  const rowClass = $derived.by(() => {
-    switch (role) {
-      case 'designated':
-        return 'ring-2 ring-success/50 bg-success/5';
-      case 'candidate':
-      case 'none':
-        return 'bg-muted';
-      default:
-        throw new Error('unreachable');
-    }
-  });
 </script>
 
 <div
   class={cn(
     'grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 rounded-lg p-3 transition-colors duration-150 sm:grid-cols-[auto_minmax(0,1fr)_auto]',
-    rowClass,
+    role === 'designated' ? 'bg-success/20 ring-2 ring-success/50 dark:bg-success/5' : 'bg-muted',
   )}
 >
   <Avatar.Root class="size-10 shrink-0">

@@ -18,13 +18,13 @@
 
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import { Button } from '$lib/components/ui/button';
+  import { cn } from '$lib/components/ui/utils';
   import { enhance } from '$app/forms';
 
   const { userId, role }: Props = $props();
 
   interface PrimaryControls {
     action: 'promote' | 'demote';
-    class: string;
     text: string;
     pastTense: string;
     icon: Component;
@@ -34,14 +34,12 @@
     role === 'designated'
       ? {
           action: 'demote',
-          class: 'bg-warning text-warning-foreground hover:bg-warning/80',
           text: 'Demote',
           pastTense: 'demoted',
           icon: ArrowDownIcon,
         }
       : {
           action: 'promote',
-          class: 'bg-success text-success-foreground hover:bg-success/80',
           text: 'Promote',
           pastTense: 'promoted',
           icon: ArrowUpIcon,
@@ -86,7 +84,15 @@
     }}
   >
     <input type="hidden" name="userId" value={userId} />
-    <Button type="submit" size="sm" {disabled} class={primary.class}>
+    <Button
+      type="submit"
+      size="sm"
+      {disabled}
+      class={cn({
+        'bg-success text-success-foreground hover:bg-success/80': primary.action === 'promote',
+        'bg-warning text-warning-foreground hover:bg-warning/80': primary.action === 'demote',
+      })}
+    >
       <primary.icon class="size-4" />
       <span>{primary.text}</span>
     </Button>
