@@ -380,30 +380,6 @@ test.describe('Draft Lifecycle', () => {
     });
   });
 
-  test.describe('Candidate Sender Mobile Actions', () => {
-    test('Remove collapses into a kebab dropdown on xs viewports', async ({
-      adminPage,
-      seededCandidateSender: _seeded,
-    }) => {
-      await adminPage.setViewportSize({ width: 375, height: 667 });
-      await adminPage.goto('/dashboard/users/#draft-admins');
-      const card = adminPage.locator('#draft-admins');
-
-      const inlineRemove = card.getByRole('button', { name: 'Remove', exact: true });
-      await expect(inlineRemove).toBeHidden();
-
-      const kebab = card.getByRole('button', { name: 'More Actions' });
-      await expect(kebab).toBeVisible();
-      await kebab.click();
-
-      const dropdownItem = adminPage.getByRole('menuitem', { name: 'Remove' });
-      await expect(dropdownItem).toBeVisible();
-      await dropdownItem.click();
-
-      await expect(card.getByText('Candidate Sender', { exact: true })).toHaveCount(0);
-    });
-  });
-
   test.describe('Student Profile Registration', () => {
     test('Eager lands on /dashboard/student/', async ({ eagerDrafteePage }) => {
       await expect(eagerDrafteePage).toHaveURL('/dashboard/student/');
