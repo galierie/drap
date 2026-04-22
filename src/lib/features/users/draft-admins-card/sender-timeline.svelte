@@ -30,6 +30,9 @@
 </script>
 
 <div class="pl-1">
+  <p class="mb-4 text-sm text-muted-foreground">
+    Assign an administrator Gmail account to send draft notifications.
+  </p>
   <Step title="Volunteer Candidate Senders" status={step1Status} collapsible={false}>
     {#snippet metadata()}
       <span class="text-sm text-muted-foreground">
@@ -38,7 +41,7 @@
       </span>
     {/snippet}
     <p class="text-sm text-muted-foreground">
-      A draft administrator volunteers via the button on their own row.
+      A draft administrator can volunteer via the <strong>Volunteer as Candidate Sender</strong> button.
     </p>
     <ul class="mt-3 space-y-2 text-sm">
       <li class="flex items-start gap-2">
@@ -47,7 +50,9 @@
       </li>
       <li class="flex items-start gap-2">
         <AtSignIcon class="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-        <span>Your personal Gmail is used as the sender for all draft notifications.</span>
+        <span
+          >If promoted, your personal Gmail will be used as the sender for all draft notifications.</span
+        >
       </li>
       <li class="flex items-start gap-2">
         <UsersIcon class="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -72,7 +77,7 @@
     {#if typeof designated === 'undefined'}
       <p class="text-sm text-muted-foreground">
         {#if candidateCount === 0}
-          Once a candidate exists, any admin may promote them to designated sender.
+          Once a candidate exists, any admin may <strong>Promote</strong> them to designated sender.
         {:else}
           Press <strong>Promote</strong> on any candidate's row to designate them.
         {/if}
@@ -88,7 +93,7 @@
       <li class="flex items-start gap-2">
         <TimerIcon class="mt-0.5 size-4 shrink-0 text-muted-foreground" />
         <span
-          >Gmail rate-limits automated email over a rolling 24-hour window &mdash; delivery may be
+          >Gmail rate-limits automated emails over a rolling 24-hour window &mdash; delivery may be
           delayed during high-volume draft events.</span
         >
       </li>
