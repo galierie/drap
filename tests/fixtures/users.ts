@@ -2,6 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 import { mergeTests, type Page } from '@playwright/test';
 
 import * as schema from '$lib/server/database/schema';
+import { assertSingle } from '$lib/server/assert';
 import {
   type DrizzleDatabase,
   deleteValidSession,
@@ -11,11 +12,6 @@ import {
 
 import { testDatabase } from './database';
 import { testLabs } from './labs';
-
-// Placeholder ciphertexts for seeded candidate senders. The e2e suite never
-// actually dispatches email, so the encrypted OAuth tokens only need to
-// satisfy the NOT NULL constraints on `email.candidate_sender`.
-const DUMMY_BYTEA = Buffer.alloc(1);
 
 // Student fixtures with behavior-based names for E2E testing
 // Each student has a specific role in the draft lifecycle tests
@@ -833,28 +829,24 @@ const testSecondAdmin = testDatabase.extend<
 // `adminPage` during `mergeTests` and break test-scoped page lifecycles.
 const testCandidateSender = testDatabase.extend<{ seededCandidateSender: string }>({
   async seededCandidateSender({ database }, use) {
-    const [row] = await database
+    const { id } = await database
       .select({ id: schema.user.id })
       .from(schema.user)
       .where(eq(schema.user.email, 'admin@up.edu.ph'))
-      .limit(1);
-    if (typeof row === 'undefined')
-      throw new Error('admin user must exist before seeding a candidate sender');
-    await database
-      .insert(schema.candidateSender)
-      .values({
-        userId: row.id,
-        scopes: ['https://www.googleapis.com/auth/gmail.send'],
-        expiredAt: sql`now() + interval '1 hour'`,
-        accessTokenIv: DUMMY_BYTEA,
-        accessTokenCipher: DUMMY_BYTEA,
-        refreshTokenIv: DUMMY_BYTEA,
-        refreshTokenCipher: DUMMY_BYTEA,
-      })
-      .onConflictDoNothing({ target: schema.candidateSender.userId });
-    await use(row.id);
+      .limit(1)
+      .then(assertSingle);
+    await database.insert(schema.candidateSender).values({
+      userId: id,
+      scopes: ['https://www.googleapis.com/auth/gmail.send'],
+      expiredAt: sql`now() + interval '1 hour'`,
+      accessTokenIv: sql`''::bytea`,
+      accessTokenCipher: sql`''::bytea`,
+      refreshTokenIv: sql`''::bytea`,
+      refreshTokenCipher: sql`''::bytea`,
+    });
+    await use(id);
     // Cascade also removes the designated_sender row, if any.
-    await database.delete(schema.candidateSender).where(eq(schema.candidateSender.userId, row.id));
+    await database.delete(schema.candidateSender).where(eq(schema.candidateSender.userId, id));
   },
 });
 

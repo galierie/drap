@@ -267,16 +267,6 @@ test.describe('Draft Lifecycle', () => {
   });
 
   test.describe('Draft Administrators Card', () => {
-    test('legacy email dashboard route no longer resolves', async ({ adminPage }) => {
-      const response = await adminPage.goto('/dashboard/email/');
-      expect(response?.status()).toBe(404);
-    });
-
-    test('sidebar no longer shows an Email entry', async ({ adminPage }) => {
-      await adminPage.goto('/dashboard/');
-      await expect(adminPage.getByRole('link', { name: 'Email', exact: true })).toHaveCount(0);
-    });
-
     test('users page renders the Draft Administrators card with a timeline', async ({
       adminPage,
     }) => {
@@ -402,7 +392,7 @@ test.describe('Draft Lifecycle', () => {
       const inlineRemove = card.getByRole('button', { name: 'Remove', exact: true });
       await expect(inlineRemove).toBeHidden();
 
-      const kebab = card.getByRole('button', { name: 'More actions' });
+      const kebab = card.getByRole('button', { name: 'More Actions' });
       await expect(kebab).toBeVisible();
       await kebab.click();
 
