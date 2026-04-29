@@ -30,7 +30,7 @@
   </StatCard>
 
   <StatCard icon={ActivityIcon}>
-    {#snippet title()}Σ Lottery Quotas{/snippet}
+    {#snippet title()}Lottery Quotas{/snippet}
     {#snippet body()}
       <p id="stat-interventions-quota" class="text-2xl font-bold tabular-nums">
         {data.totalLotteryQuota}

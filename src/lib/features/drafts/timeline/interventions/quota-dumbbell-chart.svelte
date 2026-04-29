@@ -1,9 +1,13 @@
 <script lang="ts">
+  import CircleHelpIcon from '@lucide/svelte/icons/circle-help';
   import { BarChart } from 'layerchart';
   import { format } from 'd3-format';
+  import { max } from 'd3-array';
+  import { scaleLinear } from 'd3-scale';
 
   import * as Card from '$lib/components/ui/card';
   import * as Chart from '$lib/components/ui/chart';
+  import * as Popover from '$lib/components/ui/popover';
   import DraftedDraftees from '$lib/features/drafts/draftees/drafted/index.svelte';
   import { assert } from '$lib/assert';
   import type { DumbbellRow } from '$lib/features/drafts/types';
@@ -16,43 +20,42 @@
   const { draftId, rows }: Props = $props();
 
   const integerFormat = format('d');
-  const signedFormat = format('+d');
 
   const chartConfig = {
-    naturalLeftover: { label: 'Natural Leftover', color: 'var(--muted-foreground)' },
-    lotteryQuotaAdded: { label: 'Lottery Quota (seats added)', color: 'var(--warning)' },
-    lotteryQuotaRemoved: { label: 'Lottery Quota (seats removed)', color: 'var(--muted)' },
-    lotteryQuotaEqual: { label: 'Lottery Quota (no change)', color: 'var(--foreground)' },
+    naturalLeftover: { label: 'Regular-Round Vacancies', color: 'var(--chart-1)' },
+    lotteryQuota: { label: 'Lottery Quota', color: 'var(--chart-2)' },
   };
 
-  const labMetaById = $derived(
-    new Map(rows.map(r => [r.labId.toUpperCase(), { labName: r.labName, gap: r.gap }])),
-  );
-
-  const chartHeightPx = $derived(Math.max(140, rows.length * 40 + 80));
-
-  /**
-   * Each row becomes two grouped bars on a horizontal seat-count axis:
-   *   - `naturalLeftover` — the "do nothing" baseline (always muted-foreground).
-   *   - one of `lotteryQuotaAdded` / `lotteryQuotaRemoved` / `lotteryQuotaEqual` — the
-   *     allocated lottery quota, colored by direction so the legend tells the
-   *     "amber = added, slate = removed" story.
-   *
-   * Sparse object pattern (keyed series only set when applicable) lets the shared band
-   * tooltip render only the non-zero bar per row, mirroring `round-summary-chart.svelte`.
-   */
   const chartData = $derived(
-    rows.map(row => {
-      const data: Record<string, number | string> = {
-        lab: row.labId.toUpperCase(),
-        naturalLeftover: row.naturalLeftover,
-      };
-      if (row.gap > 0) data.lotteryQuotaAdded = row.lotteryQuota;
-      else if (row.gap < 0) data.lotteryQuotaRemoved = row.lotteryQuota;
-      else data.lotteryQuotaEqual = row.lotteryQuota;
-      return data;
-    }),
+    rows.map(row => ({
+      ...row,
+      lab: row.labId.toUpperCase(),
+    })),
   );
+
+  const xDomain = $derived.by(() => {
+    const domain = scaleLinear()
+      .domain([0, max(chartData, row => Math.max(row.naturalLeftover, row.lotteryQuota)) ?? 1])
+      .nice(4)
+      .domain();
+
+    return [domain[0] ?? 0, domain[1] ?? 1];
+  });
+
+  const chartSeries = $derived([
+    {
+      key: 'naturalLeftover',
+      label: 'Regular-Round Vacancies',
+      color: 'var(--color-naturalLeftover)',
+    },
+    {
+      key: 'lotteryQuota',
+      label: 'Lottery Quota',
+      color: 'var(--color-lotteryQuota)',
+    },
+  ]);
+
+  const chartHeightPx = $derived(Math.max(220, chartData.length * 52 + 96));
 </script>
 
 <Card.Root
@@ -61,9 +64,59 @@
   <Card.Header class="gap-3">
     <div class="flex flex-wrap items-start justify-between gap-2">
       <div class="space-y-1">
-        <Card.Title>Natural Leftover vs. Lottery Quota</Card.Title>
+        <Card.Title class="flex items-center gap-1.5">
+          <span>Regular-Round Vacancies vs. Lottery Quota</span>
+          <Popover.Root>
+            <Popover.Trigger class="leading-none transition hover:opacity-80">
+              <CircleHelpIcon class="size-3.5 text-muted-foreground" />
+            </Popover.Trigger>
+            <Popover.Content class="max-w-xs space-y-2 text-sm font-normal">
+              <p>
+                Each row compares the lab's vacancies after regular rounds with its final lottery
+                quota.
+              </p>
+              <ul class="list-disc space-y-1.5 pl-4">
+                <li>
+                  <strong>Regular-Round Vacancies</strong> are the lab seats left open after the regular
+                  faculty selection rounds.
+                </li>
+                <li>
+                  <strong>Lottery Quota</strong> is the final number of lottery seats allocated to the
+                  lab.
+                </li>
+                <li>
+                  Regular-round vacancies are
+                  <math>
+                    <msub><mi>V</mi><mi>l</mi></msub>
+                    <mo>=</mo>
+                    <msub><mi>I</mi><mi>l</mi></msub>
+                    <mo>-</mo>
+                    <msub><mi>R</mi><mi>l</mi></msub>
+                  </math>, where
+                  <math><msub><mi>I</mi><mi>l</mi></msub></math>
+                  is the lab's initial quota and
+                  <math><msub><mi>R</mi><mi>l</mi></msub></math>
+                  is the number of students assigned to that lab during regular rounds.
+                </li>
+                <li>
+                  The intervention shift is
+                  <math>
+                    <msub><mi>&Delta;</mi><mi>l</mi></msub>
+                    <mo>=</mo>
+                    <msub><mi>Q</mi><mi>l</mi></msub>
+                    <mo>-</mo>
+                    <msub><mi>V</mi><mi>l</mi></msub>
+                  </math>, where
+                  <math><msub><mi>Q</mi><mi>l</mi></msub></math>
+                  is the lottery quota for lab
+                  <math><mi>l</mi></math>.
+                </li>
+              </ul>
+            </Popover.Content>
+          </Popover.Root>
+        </Card.Title>
         <Card.Description>
-          Per-lab gap between the "do nothing" baseline and the allocated lottery quota.
+          Regular-round vacancies compared with final lottery quota.
         </Card.Description>
       </div>
       <DraftedDraftees {draftId} triggerSize="sm" />
@@ -84,54 +137,28 @@
           y="lab"
           orientation="horizontal"
           seriesLayout="group"
+          {xDomain}
+          series={chartSeries}
+          legend={false}
+          grid
           groupPadding={0.15}
           bandPadding={0.3}
-          padding={{ left: 50, top: 8, right: 16, bottom: 40 }}
-          series={[
-            {
-              key: 'naturalLeftover',
-              label: 'Natural Leftover',
-              color: 'var(--color-naturalLeftover)',
-            },
-            {
-              key: 'lotteryQuotaAdded',
-              label: 'Lottery Quota (seats added)',
-              color: 'var(--color-lotteryQuotaAdded)',
-            },
-            {
-              key: 'lotteryQuotaRemoved',
-              label: 'Lottery Quota (seats removed)',
-              color: 'var(--color-lotteryQuotaRemoved)',
-            },
-            {
-              key: 'lotteryQuotaEqual',
-              label: 'Lottery Quota (no change)',
-              color: 'var(--color-lotteryQuotaEqual)',
-            },
-          ]}
-          legend
-          grid
+          padding={{ left: 70, top: 12, right: 32, bottom: 36 }}
           props={{
             xAxis: {
               format: (value: number) => integerFormat(value),
               tickLabelProps: { dx: -4 },
             },
             yAxis: { grid: false },
+            bars: { radius: 4, strokeWidth: 1 },
           }}
         >
           {#snippet tooltip()}
             <Chart.Tooltip
               indicator="dot"
               labelAccessor={d => {
-                assert(typeof d === 'object' && d !== null && 'lab' in d);
-                return d.lab;
-              }}
-              labelFormatter={value => {
-                assert(typeof value === 'string');
-                const meta = labMetaById.get(value);
-                if (typeof meta === 'undefined') return value;
-                const gapText = meta.gap === 0 ? 'no change' : signedFormat(meta.gap);
-                return `${meta.labName} (${gapText})`;
+                assert(typeof d === 'object' && d !== null && 'labName' in d);
+                return d.labName;
               }}
               valueFormatter={value => integerFormat(Number(value))}
             />
