@@ -392,7 +392,7 @@ describe('buildInterventionsAggregate', () => {
 
   it('round === maxRounds counts as regular, round === maxRounds + 1 counts as intervention', () => {
     const counts = [
-      { labId: 'lab-b', round: MAX_ROUNDS, count: 2 },     // last regular round
+      { labId: 'lab-b', round: MAX_ROUNDS, count: 2 }, // last regular round
       { labId: 'lab-b', round: MAX_ROUNDS + 1, count: 1 }, // intervention round
     ];
     const result = buildInterventionsAggregate(10, counts, SNAPSHOTS, MAX_ROUNDS);
@@ -516,7 +516,10 @@ describe('buildLotteryAggregate', () => {
   });
 
   it('falls back to labId as lab name when lab is absent from the labs list', () => {
-    const result = buildLotteryAggregate([{ labId: 'unknown', preferenceRank: 1n, count: 1 }], LABS);
+    const result = buildLotteryAggregate(
+      [{ labId: 'unknown', preferenceRank: 1n, count: 1 }],
+      LABS,
+    );
 
     expect(result.outcomeStacks[0]?.labName).toBe('unknown');
   });
