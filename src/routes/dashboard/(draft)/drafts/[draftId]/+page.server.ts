@@ -161,7 +161,12 @@ export async function load({ params, locals: { session } }) {
     );
 
     const interventionsAggregate = isInterventionsRendered(phase)
-      ? buildInterventionsAggregate(studentCount, assignmentCountsByAttribute, quotaSnapshots)
+      ? buildInterventionsAggregate(
+          studentCount,
+          assignmentCountsByAttribute,
+          quotaSnapshots,
+          draft.maxRounds,
+        )
       : EMPTY_INTERVENTIONS_AGGREGATE;
 
     const lotteryAggregate = needsLotteryRows

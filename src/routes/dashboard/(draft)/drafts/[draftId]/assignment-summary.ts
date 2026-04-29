@@ -233,10 +233,17 @@ export function buildInterventionsAggregate(
   totalStudents: number,
   assignmentCounts: DraftAssignmentCountByAttribute[],
   quotaSnapshots: DraftLabQuotaSnapshot[],
+  maxRounds: number,
 ): InterventionsAggregate {
+  // Regular rounds only (1..maxRounds) — the stable pre-intervention baseline for naturalLeftover.
+  const regularRoundRows = assignmentCounts.filter(
+    ({ round }) => round !== null && round <= maxRounds,
+  );
+  // Regular + intervention rounds (excludes lottery, round IS NULL) — tracks pool progress.
   const nonLotteryRows = assignmentCounts.filter(({ round }) => round !== null);
-  const filledByLab = rollup(
-    nonLotteryRows,
+
+  const filledByRegularLab = rollup(
+    regularRoundRows,
     values => d3sum(values, d => d.count),
     ({ labId }) => labId,
   );
@@ -248,7 +255,7 @@ export function buildInterventionsAggregate(
 
   const dumbbellRows: DumbbellRow[] = quotaSnapshots.map(
     ({ labId, labName, initialQuota, lotteryQuota }) => {
-      const filled = filledByLab.get(labId) ?? 0;
+      const filled = filledByRegularLab.get(labId) ?? 0;
       const naturalLeftover = Math.max(0, initialQuota - filled);
       const gap = lotteryQuota - naturalLeftover;
       return { labId, labName, naturalLeftover, lotteryQuota, gap };

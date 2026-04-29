@@ -8,6 +8,8 @@
   import { CHART_COLORS } from '$lib/constants';
   import type { LotteryOutcomeStack } from '$lib/features/drafts/types';
 
+  import { keyForRank } from './lottery-outcome-chart-utils';
+
   interface Props {
     stacks: LotteryOutcomeStack[];
   }
@@ -27,8 +29,6 @@
     }),
   );
 
-  const allLabels = $derived(allBucketsMeta.map(([, label]) => label));
-
   function labelColor(label: string, i: number): string {
     if (label === NOT_PREFERRED) return 'var(--muted-foreground)';
     const color = CHART_COLORS[i % CHART_COLORS.length];
@@ -36,15 +36,21 @@
     return color;
   }
 
+  // Config and series keyed by CSS-safe identifiers (rank-1, rank-2, …, not-preferred) so that
+  // chart-style.svelte emits valid --color-* custom properties. Display labels stay in the
+  // `label` field, never in the key.
   const chartConfig = $derived(
     Object.fromEntries(
-      allLabels.map((label, i) => [label, { label, color: labelColor(label, i) }]),
+      allBucketsMeta.map(([rank, label], i) => [
+        keyForRank(rank),
+        { label, color: labelColor(label, i) },
+      ]),
     ),
   );
 
   const chartSeries = $derived(
-    allLabels.map((label, i) => ({
-      key: label,
+    allBucketsMeta.map(([rank, label], i) => ({
+      key: keyForRank(rank),
       label,
       color: labelColor(label, i),
     })),
@@ -53,8 +59,7 @@
   const chartData = $derived(
     stacks.map(stack => {
       const row: Record<string, number | string> = { lab: stack.labId.toUpperCase() };
-      for (const { label, count } of stack.buckets) if (count > 0) row[label] = count;
-
+      for (const { rank, count } of stack.buckets) if (count > 0) row[keyForRank(rank)] = count;
       return row;
     }),
   );

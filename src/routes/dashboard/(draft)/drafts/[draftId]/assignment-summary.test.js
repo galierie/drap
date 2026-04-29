@@ -273,13 +273,15 @@ const LABS = [
   { id: 'lab-c', name: 'Gamma Lab' },
 ];
 
+const MAX_ROUNDS = 3;
+
 describe('buildInterventionsAggregate', () => {
   it('computes pool size, total lottery quota, and delta from assignment counts', () => {
     const counts = [
       { labId: 'lab-a', round: 1, count: 2 },
       { labId: 'lab-b', round: 2, count: 1 },
     ];
-    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS);
+    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS, MAX_ROUNDS);
 
     expect(result.statCards.poolSize).toBe(7); // 10 - 3
     expect(result.statCards.totalLotteryQuota).toBe(12); // 3 + 6 + 3
@@ -291,7 +293,7 @@ describe('buildInterventionsAggregate', () => {
       { labId: 'lab-a', round: 1, count: 2 },
       { labId: 'lab-a', round: null, count: 1 }, // lottery row — excluded
     ];
-    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS);
+    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS, MAX_ROUNDS);
 
     expect(result.statCards.poolSize).toBe(8); // 10 - 2 (not 10 - 3)
   });
@@ -304,7 +306,7 @@ describe('buildInterventionsAggregate', () => {
       { labId: 'lab-a', round: 1, count: 2 },
       { labId: 'lab-b', round: 2, count: 1 },
     ];
-    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS);
+    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS, MAX_ROUNDS);
 
     const beta = /** @type {NonNullable<typeof result.dumbbellRows[0]>} */ (
       result.dumbbellRows.find(r => r.labId === 'lab-b')
@@ -327,7 +329,7 @@ describe('buildInterventionsAggregate', () => {
       { labId: 'lab-a', round: 1, count: 2 },
       { labId: 'lab-b', round: 2, count: 1 },
     ];
-    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS);
+    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS, MAX_ROUNDS);
 
     expect(result.dumbbellRows[0]?.labId).toBe('lab-b'); // largest gap
     expect(result.dumbbellRows[1]?.labId).toBe('lab-a'); // tied gap=0, Alpha < Gamma alphabetically
@@ -336,7 +338,7 @@ describe('buildInterventionsAggregate', () => {
 
   it('clamps naturalLeftover to 0 when more students filled than initial quota', () => {
     const counts = [{ labId: 'lab-a', round: 1, count: 99 }]; // overflow
-    const result = buildInterventionsAggregate(100, counts, SNAPSHOTS);
+    const result = buildInterventionsAggregate(100, counts, SNAPSHOTS, MAX_ROUNDS);
 
     const alpha = /** @type {NonNullable<typeof result.dumbbellRows[0]>} */ (
       result.dumbbellRows.find(r => r.labId === 'lab-a')
@@ -351,13 +353,13 @@ describe('buildInterventionsAggregate', () => {
       { labId: 'lab-b', round: 2, count: 3 },
       { labId: 'lab-c', round: 3, count: 2 },
     ];
-    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS);
+    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS, MAX_ROUNDS);
 
     expect(result.statCards.poolSize).toBe(0);
   });
 
   it('handles empty assignment counts with naturalLeftover equal to initialQuota', () => {
-    const result = buildInterventionsAggregate(10, [], SNAPSHOTS);
+    const result = buildInterventionsAggregate(10, [], SNAPSHOTS, MAX_ROUNDS);
 
     expect(result.statCards.poolSize).toBe(10);
     expect(result.dumbbellRows.find(r => r.labId === 'lab-a')?.naturalLeftover).toBe(5);
