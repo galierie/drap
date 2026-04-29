@@ -1,4 +1,4 @@
-import { index, max, rollup, sum as d3sum } from 'd3-array';
+import { cumsum, index, max, rollup, sum as d3sum, union } from 'd3-array';
 
 import { assert } from '$lib/assert';
 
@@ -148,6 +148,14 @@ function buildLabDistribution(
 
 const ORDINAL_SUFFIXES = ['th', 'st', 'nd', 'rd'] as const;
 
+function toRankKey(preferenceRank: bigint | null) {
+  return preferenceRank === null ? null : Number(preferenceRank);
+}
+
+function isRank(rank: number | null): rank is number {
+  return rank !== null;
+}
+
 export function ordinalChoice(rank: number): string {
   const mod100 = rank % 100;
   // 11th, 12th, 13th are exceptions to the normal pattern
@@ -158,35 +166,29 @@ export function ordinalChoice(rank: number): string {
 export function buildPreferenceAlignment(
   rows: DraftPreferenceAlignmentRow[],
 ): DraftSummaryChartData['preferenceAlignment'] {
-  const buckets = new Map<number | null, number>();
-  let bordaNumerator = 0;
-  let totalAssigned = 0;
-
-  for (const { preferenceRank, totalRanked, count } of rows) {
-    totalAssigned += count;
-
-    if (preferenceRank === null || totalRanked === null) {
-      buckets.set(null, (buckets.get(null) ?? 0) + count);
-      continue;
-    }
+  const countByRank = rollup(
+    rows,
+    values => d3sum(values, d => d.count),
+    ({ preferenceRank }) => toRankKey(preferenceRank),
+  );
+  const totalAssigned = d3sum(rows, d => d.count);
+  const bordaNumerator = d3sum(rows, ({ preferenceRank, totalRanked, count }) => {
+    if (preferenceRank === null || totalRanked === null) return 0;
 
     const rank = Number(preferenceRank);
     const n = totalRanked;
-    buckets.set(rank, (buckets.get(rank) ?? 0) + count);
-
-    // Borda alignment: (n - rank) / (n - 1) per student, times count (1-based index)
-    if (n > 1) bordaNumerator += (count * (n - rank)) / (n - 1);
-    else bordaNumerator += count; // single-lab ranking → perfect score
-  }
+    if (n === 1) return count;
+    return (count * (n - rank)) / (n - 1);
+  });
 
   // Ranked slices sorted ascending, "Not Preferred" appended last
-  const ranked = Array.from(buckets.entries())
+  const ranked = Array.from(countByRank.entries())
     .filter((entry): entry is [number, number] => entry[0] !== null && entry[1] > 0)
     .sort(([a], [b]) => a - b);
 
   const slices = ranked.map(([rank, count]) => ({ label: ordinalChoice(rank), count }));
 
-  const notPreferred = buckets.get(null) ?? 0;
+  const notPreferred = countByRank.get(null) ?? 0;
   if (notPreferred > 0) slices.push({ label: 'Not Preferred', count: notPreferred });
 
   return {
@@ -275,73 +277,55 @@ export function buildLotteryAggregate(
   labs: Pick<Lab, 'id' | 'name'>[],
 ): LotteryAggregate {
   const labNameById = new Map(labs.map(l => [l.id, l.name]));
-
-  let poolSize = 0;
-  let topChoice = 0;
-  let rankedLab = 0;
-  let unranked = 0;
-
-  // Keyed by numeric rank (or null for "Not Preferred") so sorting never touches label strings.
-  const labBuckets = new Map<string, Map<number | null, { label: string; count: number }>>();
-  const rankCounts = new Map<number, number>();
-  let rankedN = 0;
-
-  for (const { labId, preferenceRank, count } of rows) {
-    poolSize += count;
-    if (!labBuckets.has(labId)) labBuckets.set(labId, new Map());
-    const lb = labBuckets.get(labId);
-    assert(typeof lb !== 'undefined', `labBuckets missing entry for labId: ${labId}`);
-
-    if (preferenceRank === null) {
-      unranked += count;
-      const existing = lb.get(null);
-      lb.set(null, { label: 'Not Preferred', count: (existing?.count ?? 0) + count });
-    } else {
-      const rank = Number(preferenceRank);
-      rankedLab += count;
-      if (rank === 1) topChoice += count;
-      const label = ordinalChoice(rank);
-      const existing = lb.get(rank);
-      lb.set(rank, { label, count: (existing?.count ?? 0) + count });
-      rankCounts.set(rank, (rankCounts.get(rank) ?? 0) + count);
-      rankedN += count;
-    }
-  }
+  const rankedRows = rows.filter(({ preferenceRank }) => preferenceRank !== null);
+  const poolSize = d3sum(rows, d => d.count);
+  const topChoice = d3sum(rows, d => (d.preferenceRank === 1n ? d.count : 0));
+  const rankedLab = d3sum(rankedRows, d => d.count);
+  const unranked = d3sum(rows, d => (d.preferenceRank === null ? d.count : 0));
+  const rankCounts = rollup(
+    rankedRows,
+    values => d3sum(values, d => d.count),
+    ({ preferenceRank }) => {
+      assert(preferenceRank !== null, 'expected ranked lottery placement');
+      return Number(preferenceRank);
+    },
+  );
+  const labBuckets = rollup(
+    rows,
+    values =>
+      rollup(
+        values,
+        bucketValues => d3sum(bucketValues, d => d.count),
+        ({ preferenceRank }) => toRankKey(preferenceRank),
+      ),
+    ({ labId }) => labId,
+  );
 
   let medianRankHonored: number | null = null;
-  if (rankedN > 0) {
-    const sortedRanks = Array.from(rankCounts.entries()).sort(([a], [b]) => a - b);
-    const target = Math.ceil(rankedN / 2);
-    let cumulative = 0;
-    for (const [rank, cnt] of sortedRanks) {
-      cumulative += cnt;
-      if (cumulative >= target) {
-        medianRankHonored = rank;
-        break;
-      }
-    }
+  if (rankedLab > 0) {
+    const sortedRanks = Array.from(rankCounts).sort(([a], [b]) => a - b);
+    const target = Math.ceil(rankedLab / 2);
+    const targetIndex = cumsum(sortedRanks, ([, count]) => count).findIndex(
+      count => count >= target,
+    );
+    medianRankHonored = sortedRanks[targetIndex]?.[0] ?? null;
   }
 
   const allRankedRanks = Array.from(
-    new Set(
-      Array.from(labBuckets.values()).flatMap(m =>
-        Array.from(m.keys()).filter((k): k is number => k !== null),
-      ),
-    ),
+    union(...Array.from(labBuckets.values(), buckets => Array.from(buckets.keys()).filter(isRank))),
   ).sort((a, b) => a - b);
 
   const outcomeStacks = Array.from(labBuckets.entries())
     .map(([labId, buckets]) => {
-      const total = Array.from(buckets.values()).reduce((s, { count }) => s + count, 0);
+      const total = d3sum(buckets.values());
       const ordered: LotteryOutcomeBucket[] = [];
       for (const rank of allRankedRanks) {
-        const entry = buckets.get(rank);
-        if (entry && entry.count > 0)
-          ordered.push({ rank, label: entry.label, count: entry.count });
+        const count = buckets.get(rank) ?? 0;
+        if (count > 0) ordered.push({ rank, label: ordinalChoice(rank), count });
       }
-      const notPreferred = buckets.get(null);
-      if (notPreferred && notPreferred.count > 0)
-        ordered.push({ rank: null, label: 'Not Preferred', count: notPreferred.count });
+      const notPreferred = buckets.get(null) ?? 0;
+      if (notPreferred > 0)
+        ordered.push({ rank: null, label: 'Not Preferred', count: notPreferred });
       return { labId, labName: labNameById.get(labId) ?? labId, buckets: ordered, total };
     })
     .sort((a, b) => a.labName.localeCompare(b.labName));

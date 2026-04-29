@@ -16,7 +16,7 @@
   import { DraftPhase, getDraftPhase } from '$lib/features/drafts/phase';
   import { resolve } from '$app/paths';
 
-  import Step, { type Status } from './step.svelte';
+  import Step from './step.svelte';
 
   import InterventionsActive from './interventions/active.svelte';
   import LotteryCompleted from './lottery/completed.svelte';
