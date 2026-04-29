@@ -49,17 +49,23 @@
   );
 
   const chartSeries = $derived(
-    allBucketsMeta.map(([rank, label], i) => ({
-      key: keyForRank(rank),
-      label,
-      color: labelColor(label, i),
-    })),
+    allBucketsMeta
+      .map(([rank, label], i) => ({
+        key: keyForRank(rank),
+        label,
+        color: labelColor(label, i),
+      }))
+      .reverse(),
   );
 
   const chartData = $derived(
     stacks.map(stack => {
       const row: Record<string, number | string> = { lab: stack.labId.toUpperCase() };
-      for (const { rank, count } of stack.buckets) if (count > 0) row[keyForRank(rank)] = count;
+      const countByRank = new Map(stack.buckets.map(({ rank, count }) => [rank, count]));
+      for (const [rank] of allBucketsMeta) {
+        const count = countByRank.get(rank);
+        if (typeof count !== 'undefined' && count > 0) row[keyForRank(rank)] = count;
+      }
       return row;
     }),
   );

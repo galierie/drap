@@ -25,17 +25,7 @@
       No lottery was necessary — all pool students were placed manually.
     </p>
   {/if}
-
-  <div class="prose max-w-none dark:prose-invert">
-    <h3>{isReview ? 'Review Phase' : 'Lottery Phase'}</h3>
-    {#if isReview}
-      <p>
-        Lottery assignment has completed. Review the results below. When ready, finalize to dispatch
-        emails and synchronize official student lab assignments.
-      </p>
-      <FinalizeForm {draftId} />
-    {:else}
-      <p>The lottery phase has completed. Review the results below.</p>
-    {/if}
-  </div>
+  {#if isReview}
+    <FinalizeForm {draftId} />
+  {/if}
 </div>
