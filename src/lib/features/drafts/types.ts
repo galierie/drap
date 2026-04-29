@@ -132,6 +132,56 @@ export interface DraftPreferenceAlignmentRow {
   count: number;
 }
 
+export interface InterventionsStatCards {
+  poolSize: number;
+  totalLotteryQuota: number;
+  delta: number;
+}
+
+export interface DumbbellRow {
+  labId: string;
+  labName: string;
+  naturalLeftover: number;
+  lotteryQuota: number;
+  gap: number;
+}
+
+export interface InterventionsAggregate {
+  statCards: InterventionsStatCards;
+  dumbbellRows: DumbbellRow[];
+}
+
+export interface LotteryStatCards {
+  poolSize: number;
+  topChoice: number;
+  rankedLab: number;
+  unranked: number;
+  medianRankHonored: number | null;
+}
+
+export interface LotteryOutcomeRow {
+  labId: string;
+  preferenceRank: bigint | null;
+  count: number;
+}
+
+export interface LotteryOutcomeBucket {
+  label: string;
+  count: number;
+}
+
+export interface LotteryOutcomeStack {
+  labId: string;
+  labName: string;
+  buckets: LotteryOutcomeBucket[];
+  total: number;
+}
+
+export interface LotteryAggregate {
+  statCards: LotteryStatCards;
+  outcomeStacks: LotteryOutcomeStack[];
+}
+
 export interface DraftLabBordaScore {
   labId: string;
   bordaScore: number;

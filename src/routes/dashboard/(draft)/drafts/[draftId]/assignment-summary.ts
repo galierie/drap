@@ -5,10 +5,15 @@ import type {
   DraftAssignmentSummary,
   DraftLabBordaScore,
   DraftLabDistributionEntry,
+  DraftLabQuotaSnapshot,
   DraftPreferenceAlignmentRow,
   DraftSummaryChartData,
   DraftSupplyDemandEntry,
+  DumbbellRow,
+  InterventionsAggregate,
   Lab,
+  LotteryAggregate,
+  LotteryOutcomeRow,
 } from '$lib/features/drafts/types';
 
 interface QuotaSnapshot {
@@ -221,6 +226,118 @@ function buildSupplyVsDemand(
       actualShare: totalActual > 0 ? actualVal / totalActual : 0,
     };
   });
+}
+
+export function buildInterventionsAggregate(
+  totalStudents: number,
+  assignmentCounts: DraftAssignmentCountByAttribute[],
+  quotaSnapshots: DraftLabQuotaSnapshot[],
+): InterventionsAggregate {
+  const nonLotteryRows = assignmentCounts.filter(({ round }) => round !== null);
+  const filledByLab = rollup(
+    nonLotteryRows,
+    values => d3sum(values, d => d.count),
+    ({ labId }) => labId,
+  );
+
+  const totalFilledNonLottery = d3sum(nonLotteryRows, d => d.count);
+  const poolSize = Math.max(0, totalStudents - totalFilledNonLottery);
+  const totalLotteryQuota = d3sum(quotaSnapshots, s => s.lotteryQuota);
+  const delta = poolSize - totalLotteryQuota;
+
+  const dumbbellRows: DumbbellRow[] = quotaSnapshots.map(
+    ({ labId, labName, initialQuota, lotteryQuota }) => {
+      const filled = filledByLab.get(labId) ?? 0;
+      const naturalLeftover = Math.max(0, initialQuota - filled);
+      const gap = lotteryQuota - naturalLeftover;
+      return { labId, labName, naturalLeftover, lotteryQuota, gap };
+    },
+  );
+  dumbbellRows.sort(
+    (a, b) => Math.abs(b.gap) - Math.abs(a.gap) || a.labName.localeCompare(b.labName),
+  );
+
+  return { statCards: { poolSize, totalLotteryQuota, delta }, dumbbellRows };
+}
+
+export function buildLotteryAggregate(
+  rows: LotteryOutcomeRow[],
+  labs: Pick<Lab, 'id' | 'name'>[],
+): LotteryAggregate {
+  const labNameById = new Map(labs.map(l => [l.id, l.name]));
+
+  let poolSize = 0;
+  let topChoice = 0;
+  let rankedLab = 0;
+  let unranked = 0;
+
+  const labBuckets = new Map<string, Map<string, number>>();
+  const rankCounts = new Map<number, number>();
+  let rankedN = 0;
+
+  for (const { labId, preferenceRank, count } of rows) {
+    poolSize += count;
+    if (!labBuckets.has(labId)) labBuckets.set(labId, new Map());
+    const lb = labBuckets.get(labId)!;
+
+    if (preferenceRank === null) {
+      unranked += count;
+      lb.set('Not Preferred', (lb.get('Not Preferred') ?? 0) + count);
+    } else {
+      const rank = Number(preferenceRank);
+      rankedLab += count;
+      if (rank === 1) topChoice += count;
+      const label = ordinalChoice(rank);
+      lb.set(label, (lb.get(label) ?? 0) + count);
+      rankCounts.set(rank, (rankCounts.get(rank) ?? 0) + count);
+      rankedN += count;
+    }
+  }
+
+  let medianRankHonored: number | null = null;
+  if (rankedN > 0) {
+    const sortedRanks = Array.from(rankCounts.entries()).sort(([a], [b]) => a - b);
+    const target = Math.ceil(rankedN / 2);
+    let cumulative = 0;
+    for (const [rank, cnt] of sortedRanks) {
+      cumulative += cnt;
+      if (cumulative >= target) {
+        medianRankHonored = rank;
+        break;
+      }
+    }
+  }
+
+  const allRankedLabels = Array.from(
+    new Set(
+      Array.from(labBuckets.values()).flatMap(m =>
+        Array.from(m.keys()).filter(k => k !== 'Not Preferred'),
+      ),
+    ),
+  ).sort((a, b) => {
+    const numA = parseInt(a, 10);
+    const numB = parseInt(b, 10);
+    return numA - numB;
+  });
+
+  const outcomeStacks = Array.from(labBuckets.entries())
+    .map(([labId, buckets]) => {
+      const total = Array.from(buckets.values()).reduce((s, c) => s + c, 0);
+      const ordered: { label: string; count: number }[] = [];
+      for (const label of allRankedLabels) {
+        const cnt = buckets.get(label) ?? 0;
+        if (cnt > 0) ordered.push({ label, count: cnt });
+      }
+      const notPreferred = buckets.get('Not Preferred') ?? 0;
+      if (notPreferred > 0) ordered.push({ label: 'Not Preferred', count: notPreferred });
+      return { labId, labName: labNameById.get(labId) ?? labId, buckets: ordered, total };
+    })
+    .sort((a, b) => a.labName.localeCompare(b.labName));
+
+  return {
+    statCards: { poolSize, topChoice, rankedLab, unranked, medianRankHonored },
+    outcomeStacks,
+  };
 }
 
 export function buildDraftSummaryChartData(

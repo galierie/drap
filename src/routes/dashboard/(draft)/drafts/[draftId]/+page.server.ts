@@ -34,7 +34,12 @@ import { inngest } from '$lib/server/inngest/client';
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
-import { buildDraftAssignmentSummary, buildDraftSummaryChartData } from './assignment-summary';
+import {
+  buildDraftAssignmentSummary,
+  buildDraftSummaryChartData,
+  buildInterventionsAggregate,
+  buildLotteryAggregate,
+} from './assignment-summary';
 
 const enum AllowlistAddResult {
   NotAStudent = -3,
@@ -101,6 +106,7 @@ export async function load({ params, locals: { session } }) {
       assignmentCountsByAttribute,
       bordaScores,
       alignmentRows,
+      lotteryOutcomeRows,
     } = await db.transaction(
       // Needs to be done sequentially because parallel queries in a transaction are not supported.
       async db => ({
@@ -112,6 +118,7 @@ export async function load({ params, locals: { session } }) {
         assignmentCountsByAttribute: await getDraftAssignmentCountsByAttribute(db, draftId),
         bordaScores: await getLabDemandBordaScores(db, draftId),
         alignmentRows: await getDraftPreferenceAlignment(db, draftId),
+        lotteryOutcomeRows: await getLotteryOutcomePerLab(db, draftId),
       }),
       { isolationLevel: 'repeatable read' },
     );
@@ -143,6 +150,14 @@ export async function load({ params, locals: { session } }) {
       studentCount,
     );
 
+    const interventionsAggregate = buildInterventionsAggregate(
+      studentCount,
+      assignmentCountsByAttribute,
+      quotaSnapshots,
+    );
+
+    const lotteryAggregate = buildLotteryAggregate(lotteryOutcomeRows, labs);
+
     return {
       draftId,
       draft: { id: draftId, ...draft },
@@ -155,6 +170,8 @@ export async function load({ params, locals: { session } }) {
       allowlistCount,
       lateRegistrantsCount,
       timelineData,
+      interventionsAggregate,
+      lotteryAggregate,
     };
   });
 }
@@ -1284,6 +1301,31 @@ async function getDraftPreferenceAlignment(db: DbConnection, draftId: bigint) {
       )
       .where(eq(schema.facultyChoiceUser.draftId, draftId))
       .groupBy(({ preferenceRank, totalRanked }) => [preferenceRank, totalRanked]);
+  });
+}
+
+async function getLotteryOutcomePerLab(db: DbConnection, draftId: bigint) {
+  return await tracer.asyncSpan('get-lottery-outcome-per-lab', async span => {
+    span.setAttribute('database.draft.id', draftId.toString());
+    return await db
+      .select({
+        labId: schema.facultyChoiceUser.labId,
+        preferenceRank: schema.studentRankLab.index,
+        count: count(),
+      })
+      .from(schema.facultyChoiceUser)
+      .leftJoin(
+        schema.studentRankLab,
+        and(
+          eq(schema.facultyChoiceUser.draftId, schema.studentRankLab.draftId),
+          eq(schema.facultyChoiceUser.studentUserId, schema.studentRankLab.userId),
+          eq(schema.facultyChoiceUser.labId, schema.studentRankLab.labId),
+        ),
+      )
+      .where(
+        and(eq(schema.facultyChoiceUser.draftId, draftId), isNull(schema.facultyChoiceUser.round)),
+      )
+      .groupBy(({ labId, preferenceRank }) => [labId, preferenceRank]);
   });
 }
 

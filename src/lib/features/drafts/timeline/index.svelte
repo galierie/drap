@@ -9,13 +9,15 @@
     DraftAssignmentSummary,
     DraftLabQuotaSnapshot,
     DraftSummaryChartData,
+    InterventionsAggregate,
     Lab,
+    LotteryAggregate,
   } from '$lib/features/drafts/types';
   import { resolve } from '$app/paths';
 
   import Step, { type Status } from './step.svelte';
 
-  import LotteryActive from './lottery/active.svelte';
+  import InterventionsActive from './interventions/active.svelte';
   import LotteryCompleted from './lottery/completed.svelte';
   import RegistrationActive from './registration/active.svelte';
   import RegistrationClosed from './registration/closed.svelte';
@@ -47,6 +49,8 @@
     timelineData: TimelineData[];
     assignmentSummary: DraftAssignmentSummary;
     draftSummaryChartData: DraftSummaryChartData;
+    interventionsAggregate: InterventionsAggregate;
+    lotteryAggregate: LotteryAggregate;
   }
 
   const {
@@ -61,6 +65,8 @@
     timelineData,
     assignmentSummary,
     draftSummaryChartData,
+    interventionsAggregate,
+    lotteryAggregate,
   }: Props = $props();
   const draftId = $derived(rawDraftId.toString());
 
@@ -83,7 +89,7 @@
       case 'regular':
         return `Round ${draft.currRound} of ${draft.maxRounds}` as const;
       case 'intervention':
-        return 'Lottery';
+        return 'Interventions';
       case 'review':
         return 'Review';
       case 'finalized':
@@ -120,7 +126,7 @@
     }
   });
 
-  const lotteryStatus: Status = $derived.by(() => {
+  const interventionsStatus: Status = $derived.by(() => {
     switch (currentPhase) {
       case 'registration':
       case 'registration-closed':
@@ -129,6 +135,22 @@
       case 'intervention':
         return 'active';
       case 'review':
+      case 'finalized':
+        return 'completed';
+      default:
+        throw new Error('unreachable');
+    }
+  });
+
+  const lotteryStatus: Status = $derived.by(() => {
+    switch (currentPhase) {
+      case 'registration':
+      case 'registration-closed':
+      case 'regular':
+      case 'intervention':
+        return 'pending';
+      case 'review':
+        return 'active';
       case 'finalized':
         return 'completed';
       default:
@@ -208,18 +230,27 @@
       </Step>
     {/if}
 
-    <!-- Lottery -->
+    <!-- Lottery: post-intervention only (review + finalized) -->
+    {#if currentPhase === 'review' || currentPhase === 'finalized'}
+      <Step title={lotteryStepTitle} status={lotteryStatus} open={currentPhase === 'review'}>
+        <LotteryCompleted {draftId} isReview={currentPhase === 'review'} {lotteryAggregate} />
+      </Step>
+    {/if}
+
+    <!-- Interventions: active during intervention phase, historical after -->
     {#if currentPhase === 'intervention' || currentPhase === 'review' || currentPhase === 'finalized'}
       <Step
-        title={lotteryStepTitle}
-        status={lotteryStatus}
-        open={currentPhase === 'intervention' || currentPhase === 'review'}
+        title="Interventions"
+        status={interventionsStatus}
+        open={currentPhase === 'intervention'}
       >
-        {#if currentPhase === 'intervention'}
-          <LotteryActive {draftId} {labs} {snapshots} />
-        {:else}
-          <LotteryCompleted {draftId} isReview={currentPhase === 'review'} />
-        {/if}
+        <InterventionsActive
+          {draftId}
+          {labs}
+          {snapshots}
+          {interventionsAggregate}
+          isHistorical={currentPhase !== 'intervention'}
+        />
       </Step>
     {/if}
 

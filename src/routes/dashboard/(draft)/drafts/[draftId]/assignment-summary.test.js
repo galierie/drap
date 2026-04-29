@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   buildDraftAssignmentSummary,
   buildDraftSummaryChartData,
+  buildInterventionsAggregate,
+  buildLotteryAggregate,
   buildPreferenceAlignment,
   ordinalChoice,
 } from './assignment-summary';
@@ -256,5 +258,191 @@ describe('buildDraftSummaryChartData', () => {
         actualShare: 0,
       },
     ]);
+  });
+});
+
+const SNAPSHOTS = [
+  { labId: 'lab-a', labName: 'Alpha Lab', initialQuota: 5, lotteryQuota: 3 },
+  { labId: 'lab-b', labName: 'Beta Lab', initialQuota: 4, lotteryQuota: 6 },
+  { labId: 'lab-c', labName: 'Gamma Lab', initialQuota: 3, lotteryQuota: 3 },
+];
+
+const LABS = [
+  { id: 'lab-a', name: 'Alpha Lab' },
+  { id: 'lab-b', name: 'Beta Lab' },
+  { id: 'lab-c', name: 'Gamma Lab' },
+];
+
+describe('buildInterventionsAggregate', () => {
+  it('computes pool size, total lottery quota, and delta from assignment counts', () => {
+    const counts = [
+      { labId: 'lab-a', round: 1, count: 2 },
+      { labId: 'lab-b', round: 2, count: 1 },
+    ];
+    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS);
+
+    expect(result.statCards.poolSize).toBe(7); // 10 - 3
+    expect(result.statCards.totalLotteryQuota).toBe(12); // 3 + 6 + 3
+    expect(result.statCards.delta).toBe(-5); // 7 - 12
+  });
+
+  it('excludes lottery rows (round IS NULL) from studentsFilledSoFar', () => {
+    const counts = [
+      { labId: 'lab-a', round: 1, count: 2 },
+      { labId: 'lab-a', round: null, count: 1 }, // lottery row — excluded
+    ];
+    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS);
+
+    expect(result.statCards.poolSize).toBe(8); // 10 - 2 (not 10 - 3)
+  });
+
+  it('computes natural leftover and gap per lab', () => {
+    // Alpha: initialQuota=5, filled=2 (round 1) → naturalLeftover=3, lotteryQuota=3 → gap=0
+    // Beta: initialQuota=4, filled=1 (round 2) → naturalLeftover=3, lotteryQuota=6 → gap=+3
+    // Gamma: initialQuota=3, filled=0 → naturalLeftover=3, lotteryQuota=3 → gap=0
+    const counts = [
+      { labId: 'lab-a', round: 1, count: 2 },
+      { labId: 'lab-b', round: 2, count: 1 },
+    ];
+    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS);
+
+    const beta = /** @type {NonNullable<typeof result.dumbbellRows[0]>} */ (
+      result.dumbbellRows.find(r => r.labId === 'lab-b')
+    );
+    expect(beta).toBeDefined();
+    expect(beta.naturalLeftover).toBe(3);
+    expect(beta.lotteryQuota).toBe(6);
+    expect(beta.gap).toBe(3);
+
+    const alpha = /** @type {NonNullable<typeof result.dumbbellRows[0]>} */ (
+      result.dumbbellRows.find(r => r.labId === 'lab-a')
+    );
+    expect(alpha.naturalLeftover).toBe(3);
+    expect(alpha.gap).toBe(0);
+  });
+
+  it('sorts dumbbell rows by abs(gap) descending, then labName ascending for ties', () => {
+    // Beta gap = +3 (largest), Alpha gap = 0, Gamma gap = 0 → Alpha before Gamma alphabetically
+    const counts = [
+      { labId: 'lab-a', round: 1, count: 2 },
+      { labId: 'lab-b', round: 2, count: 1 },
+    ];
+    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS);
+
+    expect(result.dumbbellRows[0]?.labId).toBe('lab-b'); // largest gap
+    expect(result.dumbbellRows[1]?.labId).toBe('lab-a'); // tied gap=0, Alpha < Gamma alphabetically
+    expect(result.dumbbellRows[2]?.labId).toBe('lab-c');
+  });
+
+  it('clamps naturalLeftover to 0 when more students filled than initial quota', () => {
+    const counts = [{ labId: 'lab-a', round: 1, count: 99 }]; // overflow
+    const result = buildInterventionsAggregate(100, counts, SNAPSHOTS);
+
+    const alpha = /** @type {NonNullable<typeof result.dumbbellRows[0]>} */ (
+      result.dumbbellRows.find(r => r.labId === 'lab-a')
+    );
+    expect(alpha.naturalLeftover).toBe(0);
+    expect(alpha.gap).toBe(3); // lotteryQuota(3) - naturalLeftover(0)
+  });
+
+  it('returns zero pool when all students are filled in non-lottery rounds', () => {
+    const counts = [
+      { labId: 'lab-a', round: 1, count: 5 },
+      { labId: 'lab-b', round: 2, count: 3 },
+      { labId: 'lab-c', round: 3, count: 2 },
+    ];
+    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS);
+
+    expect(result.statCards.poolSize).toBe(0);
+  });
+
+  it('handles empty assignment counts with naturalLeftover equal to initialQuota', () => {
+    const result = buildInterventionsAggregate(10, [], SNAPSHOTS);
+
+    expect(result.statCards.poolSize).toBe(10);
+    expect(result.dumbbellRows.find(r => r.labId === 'lab-a')?.naturalLeftover).toBe(5);
+  });
+});
+
+describe('buildLotteryAggregate', () => {
+  it('computes all five stat tiles from a mixed cohort', () => {
+    const rows = [
+      { labId: 'lab-a', preferenceRank: 1n, count: 2 }, // top-choice, ranked
+      { labId: 'lab-b', preferenceRank: 2n, count: 1 }, // ranked (not top)
+      { labId: 'lab-c', preferenceRank: null, count: 1 }, // unranked
+    ];
+    const result = buildLotteryAggregate(rows, LABS);
+
+    expect(result.statCards.poolSize).toBe(4);
+    expect(result.statCards.topChoice).toBe(2);
+    expect(result.statCards.rankedLab).toBe(3);
+    expect(result.statCards.unranked).toBe(1);
+  });
+
+  it('computes median rank from ranked placements only', () => {
+    // 3 ranked: ranks [1, 1, 3] → sorted distribution: rank 1 × 2, rank 3 × 1
+    // rankedN = 3, target = ceil(3/2) = 2, cumulative after rank 1 = 2 ≥ 2 → median = 1
+    const rows = [
+      { labId: 'lab-a', preferenceRank: 1n, count: 2 },
+      { labId: 'lab-b', preferenceRank: 3n, count: 1 },
+    ];
+    const result = buildLotteryAggregate(rows, LABS);
+
+    expect(result.statCards.medianRankHonored).toBe(1);
+  });
+
+  it('returns null median when all placements are unranked', () => {
+    const rows = [{ labId: 'lab-a', preferenceRank: null, count: 3 }];
+    const result = buildLotteryAggregate(rows, LABS);
+
+    expect(result.statCards.medianRankHonored).toBeNull();
+  });
+
+  it('returns empty outcomeStacks and zero stats for empty rows', () => {
+    const result = buildLotteryAggregate([], LABS);
+
+    expect(result.statCards.poolSize).toBe(0);
+    expect(result.statCards.topChoice).toBe(0);
+    expect(result.statCards.unranked).toBe(0);
+    expect(result.statCards.medianRankHonored).toBeNull();
+    expect(result.outcomeStacks).toHaveLength(0);
+  });
+
+  it('builds outcome stacks grouped by lab with correct label ordering', () => {
+    const rows = [
+      { labId: 'lab-a', preferenceRank: 2n, count: 1 },
+      { labId: 'lab-a', preferenceRank: null, count: 1 },
+      { labId: 'lab-a', preferenceRank: 1n, count: 2 },
+    ];
+    const result = buildLotteryAggregate(rows, LABS);
+
+    const alphaStack = /** @type {NonNullable<typeof result.outcomeStacks[0]>} */ (
+      result.outcomeStacks.find(s => s.labId === 'lab-a')
+    );
+    expect(alphaStack).toBeDefined();
+    expect(alphaStack.total).toBe(4);
+
+    const labels = alphaStack.buckets.map(b => b.label);
+    expect(labels.indexOf('1st Choice')).toBeLessThan(labels.indexOf('2nd Choice'));
+    expect(labels[labels.length - 1]).toBe('Not Preferred');
+  });
+
+  it('excludes labs with zero lottery placements from outcomeStacks', () => {
+    const rows = [{ labId: 'lab-a', preferenceRank: 1n, count: 2 }];
+    const result = buildLotteryAggregate(rows, LABS);
+
+    expect(result.outcomeStacks).toHaveLength(1);
+    expect(result.outcomeStacks[0]?.labId).toBe('lab-a');
+  });
+
+  it('sorts outcome stacks alphabetically by lab name', () => {
+    const rows = [
+      { labId: 'lab-c', preferenceRank: 1n, count: 1 },
+      { labId: 'lab-a', preferenceRank: 1n, count: 1 },
+    ];
+    const result = buildLotteryAggregate(rows, LABS);
+
+    expect(result.outcomeStacks[0]?.labName).toBe('Alpha Lab');
+    expect(result.outcomeStacks[1]?.labName).toBe('Gamma Lab');
   });
 });
