@@ -364,6 +364,44 @@ describe('buildInterventionsAggregate', () => {
     expect(result.statCards.poolSize).toBe(10);
     expect(result.dumbbellRows.find(r => r.labId === 'lab-a')?.naturalLeftover).toBe(5);
   });
+
+  it('naturalLeftover uses only regular-round rows (round <= maxRounds)', () => {
+    const counts = [
+      { labId: 'lab-a', round: 1, count: 2 },
+      { labId: 'lab-a', round: MAX_ROUNDS, count: 1 }, // last regular round
+    ];
+    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS, MAX_ROUNDS);
+
+    // filled by regular rounds = 3; naturalLeftover = 5 - 3 = 2
+    expect(result.dumbbellRows.find(r => r.labId === 'lab-a')?.naturalLeftover).toBe(2);
+    expect(result.statCards.poolSize).toBe(7);
+  });
+
+  it('intervention-round rows decrease poolSize but not naturalLeftover', () => {
+    const counts = [
+      { labId: 'lab-a', round: 1, count: 2 },
+      { labId: 'lab-a', round: MAX_ROUNDS + 1, count: 1 }, // intervention round
+    ];
+    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS, MAX_ROUNDS);
+
+    // naturalLeftover only sees the regular round: 5 - 2 = 3
+    expect(result.dumbbellRows.find(r => r.labId === 'lab-a')?.naturalLeftover).toBe(3);
+    // poolSize sees both regular + intervention: 10 - 3 = 7
+    expect(result.statCards.poolSize).toBe(7);
+  });
+
+  it('round === maxRounds counts as regular, round === maxRounds + 1 counts as intervention', () => {
+    const counts = [
+      { labId: 'lab-b', round: MAX_ROUNDS, count: 2 },     // last regular round
+      { labId: 'lab-b', round: MAX_ROUNDS + 1, count: 1 }, // intervention round
+    ];
+    const result = buildInterventionsAggregate(10, counts, SNAPSHOTS, MAX_ROUNDS);
+
+    // only MAX_ROUNDS feeds naturalLeftover: 4 - 2 = 2
+    expect(result.dumbbellRows.find(r => r.labId === 'lab-b')?.naturalLeftover).toBe(2);
+    // both rows feed poolSize: 10 - 3 = 7
+    expect(result.statCards.poolSize).toBe(7);
+  });
 });
 
 describe('buildLotteryAggregate', () => {
@@ -446,5 +484,40 @@ describe('buildLotteryAggregate', () => {
 
     expect(result.outcomeStacks[0]?.labName).toBe('Alpha Lab');
     expect(result.outcomeStacks[1]?.labName).toBe('Gamma Lab');
+  });
+
+  it('populates the rank field on each bucket (1-based for ranked, null for unranked)', () => {
+    const rows = [
+      { labId: 'lab-a', preferenceRank: 1n, count: 2 },
+      { labId: 'lab-a', preferenceRank: null, count: 1 },
+    ];
+    const result = buildLotteryAggregate(rows, LABS);
+
+    expect(result.outcomeStacks.find(s => s.labId === 'lab-a')?.buckets).toEqual([
+      { rank: 1, label: '1st Choice', count: 2 },
+      { rank: null, label: 'Not Preferred', count: 1 },
+    ]);
+  });
+
+  it('sorts buckets numerically by rank across all stacks, with null last', () => {
+    // lab-a has only rank 3; lab-b has only rank 1 — allRankedRanks must be [1,3] globally
+    const rows = [
+      { labId: 'lab-a', preferenceRank: 3n, count: 2 },
+      { labId: 'lab-b', preferenceRank: 1n, count: 5 },
+    ];
+    const result = buildLotteryAggregate(rows, LABS);
+
+    expect(result.outcomeStacks.find(s => s.labId === 'lab-a')?.buckets).toEqual([
+      { rank: 3, label: '3rd Choice', count: 2 },
+    ]);
+    expect(result.outcomeStacks.find(s => s.labId === 'lab-b')?.buckets).toEqual([
+      { rank: 1, label: '1st Choice', count: 5 },
+    ]);
+  });
+
+  it('falls back to labId as lab name when lab is absent from the labs list', () => {
+    const result = buildLotteryAggregate([{ labId: 'unknown', preferenceRank: 1n, count: 1 }], LABS);
+
+    expect(result.outcomeStacks[0]?.labName).toBe('unknown');
   });
 });
