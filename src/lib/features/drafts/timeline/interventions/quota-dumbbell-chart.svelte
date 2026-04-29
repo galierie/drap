@@ -1,5 +1,10 @@
 <script lang="ts">
+  import { BarChart } from 'layerchart';
+  import { format } from 'd3-format';
+
   import * as Card from '$lib/components/ui/card';
+  import * as Chart from '$lib/components/ui/chart';
+  import { assert } from '$lib/assert';
   import type { DumbbellRow } from '$lib/features/drafts/types';
 
   interface Props {
@@ -8,26 +13,44 @@
 
   const { rows }: Props = $props();
 
-  const maxDomain = $derived(
-    rows.length === 0
-      ? 1
-      : Math.max(1, ...rows.map(r => Math.max(r.naturalLeftover, r.lotteryQuota))),
+  const integerFormat = format('d');
+  const signedFormat = format('+d');
+
+  const chartConfig = {
+    naturalLeftover: { label: 'Natural Leftover', color: 'var(--muted-foreground)' },
+    lotteryQuotaAdded: { label: 'Lottery Quota (seats added)', color: 'var(--warning)' },
+    lotteryQuotaRemoved: { label: 'Lottery Quota (seats removed)', color: 'var(--muted)' },
+    lotteryQuotaEqual: { label: 'Lottery Quota (no change)', color: 'var(--foreground)' },
+  };
+
+  const labMetaById = $derived(
+    new Map(rows.map(r => [r.labId.toUpperCase(), { labName: r.labName, gap: r.gap }])),
   );
 
-  function pct(value: number): string {
-    return `${(value / maxDomain) * 100}%`;
-  }
+  const chartHeightPx = $derived(Math.max(140, rows.length * 40 + 80));
 
-  function lineColor(gap: number): string {
-    if (gap > 0) return 'var(--warning)';
-    return 'var(--muted-foreground)';
-  }
-
-  function dotColor(gap: number): string {
-    if (gap > 0) return 'var(--warning)';
-    if (gap < 0) return 'var(--muted-foreground)';
-    return 'var(--foreground)';
-  }
+  /**
+   * Each row becomes two grouped bars on a horizontal seat-count axis:
+   *   - `naturalLeftover` — the "do nothing" baseline (always muted-foreground).
+   *   - one of `lotteryQuotaAdded` / `lotteryQuotaRemoved` / `lotteryQuotaEqual` — the
+   *     allocated lottery quota, colored by direction so the legend tells the
+   *     "amber = added, slate = removed" story.
+   *
+   * Sparse object pattern (keyed series only set when applicable) lets the shared band
+   * tooltip render only the non-zero bar per row, mirroring `round-summary-chart.svelte`.
+   */
+  const chartData = $derived(
+    rows.map(row => {
+      const data: Record<string, number | string> = {
+        lab: row.labId.toUpperCase(),
+        naturalLeftover: row.naturalLeftover,
+      };
+      if (row.gap > 0) data.lotteryQuotaAdded = row.lotteryQuota;
+      else if (row.gap < 0) data.lotteryQuotaRemoved = row.lotteryQuota;
+      else data.lotteryQuotaEqual = row.lotteryQuota;
+      return data;
+    }),
+  );
 </script>
 
 <Card.Root
@@ -44,94 +67,71 @@
     {#if rows.length === 0}
       <p class="text-sm text-muted-foreground">No quota data available.</p>
     {:else}
-      <div class="space-y-3">
-        {#each rows as row (row.labId)}
-          {@const leftPct = pct(row.naturalLeftover)}
-          {@const rightPct = pct(row.lotteryQuota)}
-          {@const minPct = pct(Math.min(row.naturalLeftover, row.lotteryQuota))}
-          {@const maxPct = pct(Math.max(row.naturalLeftover, row.lotteryQuota))}
-          <div class="flex items-center gap-3">
-            <span
-              class="w-24 shrink-0 overflow-hidden text-right text-xs text-ellipsis whitespace-nowrap text-muted-foreground"
-              title={row.labName}
-            >
-              {row.labName}
-            </span>
-
-            <div class="relative h-6 flex-1">
-              <svg class="h-full w-full overflow-visible" aria-hidden="true">
-                <!-- background track -->
-                <line x1="0" y1="50%" x2="100%" y2="50%" stroke="var(--border)" stroke-width="1" />
-
-                <!-- connecting gap line (only when gap exists) -->
-                {#if row.gap !== 0}
-                  <line
-                    x1={minPct}
-                    y1="50%"
-                    x2={maxPct}
-                    y2="50%"
-                    stroke={lineColor(row.gap)}
-                    stroke-width="3"
-                    stroke-linecap="round"
-                  />
-                {/if}
-
-                <!-- naturalLeftover dot (baseline, always dark) -->
-                <circle
-                  cx={leftPct}
-                  cy="50%"
-                  r="5"
-                  fill="var(--foreground)"
-                  stroke="var(--background)"
-                  stroke-width="1.5"
-                />
-
-                <!-- lotteryQuota dot (colored when deviated) -->
-                <circle
-                  cx={rightPct}
-                  cy="50%"
-                  r="5"
-                  fill={dotColor(row.gap)}
-                  stroke="var(--background)"
-                  stroke-width="1.5"
-                />
-              </svg>
-            </div>
-
-            <span class="w-10 shrink-0 font-mono text-xs tabular-nums">
-              {#if row.gap > 0}
-                <span class="text-warning-foreground">+{row.gap}</span>
-              {:else if row.gap < 0}
-                <span class="text-muted-foreground">{row.gap}</span>
-              {:else}
-                <span class="text-muted-foreground/50">—</span>
-              {/if}
-            </span>
-          </div>
-        {/each}
-
-        <!-- Legend -->
-        <div class="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-xs text-muted-foreground">
-          <span class="flex items-center gap-1.5">
-            <svg width="10" height="10" aria-hidden="true">
-              <circle cx="5" cy="5" r="4" fill="var(--foreground)" />
-            </svg>
-            Natural leftover
-          </span>
-          <span class="flex items-center gap-1.5">
-            <svg width="10" height="10" aria-hidden="true">
-              <circle cx="5" cy="5" r="4" fill="var(--warning)" />
-            </svg>
-            Lottery quota (seats added)
-          </span>
-          <span class="flex items-center gap-1.5">
-            <svg width="10" height="10" aria-hidden="true">
-              <circle cx="5" cy="5" r="4" fill="var(--muted-foreground)" />
-            </svg>
-            Lottery quota (seats removed)
-          </span>
-        </div>
-      </div>
+      <Chart.Container
+        id="quota-dumbbell-chart"
+        config={chartConfig}
+        class="w-full"
+        style="height: {chartHeightPx}px;"
+      >
+        <BarChart
+          data={chartData}
+          y="lab"
+          orientation="horizontal"
+          seriesLayout="group"
+          groupPadding={0.15}
+          bandPadding={0.3}
+          padding={{ left: 50, top: 8, right: 16, bottom: 40 }}
+          series={[
+            {
+              key: 'naturalLeftover',
+              label: 'Natural Leftover',
+              color: 'var(--color-naturalLeftover)',
+            },
+            {
+              key: 'lotteryQuotaAdded',
+              label: 'Lottery Quota (seats added)',
+              color: 'var(--color-lotteryQuotaAdded)',
+            },
+            {
+              key: 'lotteryQuotaRemoved',
+              label: 'Lottery Quota (seats removed)',
+              color: 'var(--color-lotteryQuotaRemoved)',
+            },
+            {
+              key: 'lotteryQuotaEqual',
+              label: 'Lottery Quota (no change)',
+              color: 'var(--color-lotteryQuotaEqual)',
+            },
+          ]}
+          legend
+          grid
+          props={{
+            xAxis: {
+              format: (value: number) => integerFormat(value),
+              tickLabelProps: { dx: -4 },
+            },
+            yAxis: { grid: false },
+          }}
+        >
+          {#snippet tooltip()}
+            <Chart.Tooltip
+              indicator="dot"
+              labelAccessor={d => {
+                assert(typeof d === 'object' && d !== null && 'lab' in d);
+                return d.lab;
+              }}
+              labelFormatter={value => {
+                assert(typeof value === 'string');
+                const meta = labMetaById.get(value);
+                if (typeof meta === 'undefined') return value;
+                const gapText = meta.gap === 0 ? 'no change' : signedFormat(meta.gap);
+                return `${meta.labName} (${gapText})`;
+              }}
+              valueFormatter={value => integerFormat(Number(value))}
+            />
+          {/snippet}
+        </BarChart>
+      </Chart.Container>
     {/if}
   </Card.Content>
 </Card.Root>

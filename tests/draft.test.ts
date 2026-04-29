@@ -1830,9 +1830,7 @@ test.describe('Draft Lifecycle', () => {
       adminPage,
     }) => {
       await adminPage.goto('/dashboard/drafts/1/');
-      await expect(
-        adminPage.getByRole('heading', { name: 'Interventions Phase' }),
-      ).toBeVisible();
+      await expect(adminPage.getByRole('heading', { name: 'Interventions Phase' })).toBeVisible();
       await expectVisibleButtons(adminPage, ['Eligible for Lottery', 'Already Drafted']);
 
       await adminPage.getByRole('button', { name: 'Eligible for Lottery' }).first().click();
@@ -1898,9 +1896,7 @@ test.describe('Draft Lifecycle', () => {
   test.describe('Lottery Phase', () => {
     test('draft enters lottery phase', async ({ adminPage }) => {
       await adminPage.goto('/dashboard/drafts/1/');
-      await expect(
-        adminPage.getByRole('heading', { name: 'Interventions Phase' }),
-      ).toBeVisible();
+      await expect(adminPage.getByRole('heading', { name: 'Interventions Phase' })).toBeVisible();
       await expectSheetContents(
         adminPage,
         'Already Drafted',
@@ -2976,9 +2972,7 @@ test.describe('Draft Lifecycle', () => {
 
     test('lottery stage shows zero eligible students', async ({ adminPage }) => {
       await adminPage.goto('/dashboard/drafts/2/');
-      await expect(
-        adminPage.getByRole('heading', { name: 'Interventions Phase' }),
-      ).toBeVisible();
+      await expect(adminPage.getByRole('heading', { name: 'Interventions Phase' })).toBeVisible();
       await expectVisibleButtons(adminPage, ['Eligible for Lottery']);
       await adminPage.getByRole('button', { name: 'Eligible for Lottery' }).first().click();
       await expect(
