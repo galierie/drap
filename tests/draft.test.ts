@@ -1830,7 +1830,9 @@ test.describe('Draft Lifecycle', () => {
       adminPage,
     }) => {
       await adminPage.goto('/dashboard/drafts/1/');
-      await expect(adminPage.getByRole('heading', { name: 'Interventions Phase' })).toBeVisible();
+      await expect(
+        adminPage.getByRole('heading', { name: 'Interventions', exact: true }),
+      ).toBeVisible();
       await expectVisibleButtons(adminPage, ['Eligible for Lottery', 'See Drafted']);
 
       await adminPage.getByRole('button', { name: 'Eligible for Lottery' }).first().click();
