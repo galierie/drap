@@ -112,6 +112,11 @@ export interface DraftPreferenceAlignment {
   bordaScore: number;
 }
 
+export interface DraftPreferenceAlignmentAggregate {
+  rows: DraftPreferenceAlignmentRow[];
+  bordaScore: number;
+}
+
 export interface DraftSupplyDemandEntry {
   labId: string;
   labName: string;
@@ -127,8 +132,7 @@ export interface DraftSummaryChartData {
 }
 
 export interface DraftPreferenceAlignmentRow {
-  preferenceRank: bigint | null;
-  totalRanked: number | null;
+  preferenceRank: number | null;
   count: number;
 }
 
@@ -161,6 +165,7 @@ export interface LotteryStatCards {
 
 export interface LotteryOutcomeRow {
   labId: string;
+  labName: string;
   preferenceRank: bigint | null;
   count: number;
 }
@@ -182,11 +187,6 @@ export interface LotteryOutcomeStack {
 export interface LotteryAggregate {
   statCards: LotteryStatCards;
   outcomeStacks: LotteryOutcomeStack[];
-}
-
-export interface DraftLabBordaScore {
-  labId: string;
-  bordaScore: number;
 }
 
 export interface DraftStatsRecord {

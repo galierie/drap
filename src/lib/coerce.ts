@@ -30,3 +30,7 @@ export function coerceNumber(value: unknown) {
       throw new CoercionError('expected a number');
   }
 }
+
+export function coerceNullableNumber(value: unknown) {
+  return value === null ? null : coerceNumber(value);
+}
