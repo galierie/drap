@@ -9,13 +9,16 @@
     DraftAssignmentSummary,
     DraftLabQuotaSnapshot,
     DraftSummaryChartData,
+    InterventionsAggregate,
     Lab,
+    LotteryAggregate,
   } from '$lib/features/drafts/types';
+  import { DraftPhase, getDraftPhase } from '$lib/features/drafts/phase';
   import { resolve } from '$app/paths';
 
-  import Step, { type Status } from './step.svelte';
+  import Step from './step.svelte';
 
-  import LotteryActive from './lottery/active.svelte';
+  import InterventionsActive from './interventions/active.svelte';
   import LotteryCompleted from './lottery/completed.svelte';
   import RegistrationActive from './registration/active.svelte';
   import RegistrationClosed from './registration/closed.svelte';
@@ -23,16 +26,10 @@
   import RegularPhase from './regular/index.svelte';
   import SummaryPhase from './summary/index.svelte';
 
-  type Phase =
-    | 'registration'
-    | 'registration-closed'
-    | 'regular'
-    | 'intervention'
-    | 'review'
-    | 'finalized';
-
   interface TimelineData {
-    createdAt: Date;
+    date: Date;
+    label: string;
+    count: number;
   }
 
   interface Props {
@@ -47,6 +44,8 @@
     timelineData: TimelineData[];
     assignmentSummary: DraftAssignmentSummary;
     draftSummaryChartData: DraftSummaryChartData;
+    interventionsAggregate: InterventionsAggregate;
+    lotteryAggregate: LotteryAggregate;
   }
 
   const {
@@ -61,32 +60,27 @@
     timelineData,
     assignmentSummary,
     draftSummaryChartData,
+    interventionsAggregate,
+    lotteryAggregate,
   }: Props = $props();
   const draftId = $derived(rawDraftId.toString());
 
   // Determine current phase
-  const currentPhase = $derived.by(() => {
-    if (draft.activePeriodEnd !== null) return 'finalized';
-    if (draft.currRound === null) return 'review';
-    if (draft.currRound === 0)
-      return draft.isRegistrationClosed ? 'registration-closed' : 'registration';
-    if (draft.currRound > draft.maxRounds) return 'intervention';
-    return 'regular';
-  });
+  const currentPhase = $derived(getDraftPhase(draft));
 
   // Phase labels for display
-  function getPhaseLabel(phase: Phase) {
+  function getPhaseLabel(phase: DraftPhase) {
     switch (phase) {
-      case 'registration':
-      case 'registration-closed':
+      case DraftPhase.Registration:
+      case DraftPhase.RegistrationClosed:
         return 'Registration';
-      case 'regular':
+      case DraftPhase.Regular:
         return `Round ${draft.currRound} of ${draft.maxRounds}` as const;
-      case 'intervention':
-        return 'Lottery';
-      case 'review':
+      case DraftPhase.Intervention:
+        return 'Interventions';
+      case DraftPhase.Review:
         return 'Review';
-      case 'finalized':
+      case DraftPhase.Finalized:
         return 'Finalized';
       default:
         throw new Error('unreachable');
@@ -94,49 +88,64 @@
   }
 
   // Status per phase
-  const registrationStatus: Status = $derived.by(() => {
+  const registrationStatus = $derived.by(() => {
     switch (currentPhase) {
-      case 'registration':
-      case 'registration-closed':
+      case DraftPhase.Registration:
+      case DraftPhase.RegistrationClosed:
         return 'active';
       default:
         return 'completed';
     }
   });
 
-  const regularStatus: Status = $derived.by(() => {
+  const regularStatus = $derived.by(() => {
     switch (currentPhase) {
-      case 'regular':
+      case DraftPhase.Regular:
         return 'active';
-      case 'registration':
-      case 'registration-closed':
+      case DraftPhase.Registration:
+      case DraftPhase.RegistrationClosed:
         return 'pending';
-      case 'intervention':
-      case 'review':
-      case 'finalized':
+      case DraftPhase.Intervention:
+      case DraftPhase.Review:
+      case DraftPhase.Finalized:
         return 'completed';
       default:
         throw new Error('unreachable');
     }
   });
 
-  const lotteryStatus: Status = $derived.by(() => {
-    switch (currentPhase) {
-      case 'registration':
-      case 'registration-closed':
-      case 'regular':
-        return 'pending';
-      case 'intervention':
+  type InterventionsRenderedPhase =
+    | DraftPhase.Intervention
+    | DraftPhase.Review
+    | DraftPhase.Finalized;
+  type LotteryRenderedPhase = DraftPhase.Review | DraftPhase.Finalized;
+
+  function interventionsStatusFor(phase: InterventionsRenderedPhase) {
+    switch (phase) {
+      case DraftPhase.Intervention:
         return 'active';
-      case 'review':
-      case 'finalized':
+      case DraftPhase.Review:
+      case DraftPhase.Finalized:
         return 'completed';
       default:
         throw new Error('unreachable');
     }
-  });
+  }
 
-  const lotteryStepTitle = $derived(currentPhase === 'review' ? 'Review' : 'Lottery');
+  function lotteryStatusFor(phase: LotteryRenderedPhase) {
+    switch (phase) {
+      case DraftPhase.Review:
+        return 'active';
+      case DraftPhase.Finalized:
+        return 'completed';
+      default:
+        throw new Error('unreachable');
+    }
+  }
+
+  function lotteryStepTitleFor(phase: LotteryRenderedPhase) {
+    return phase === DraftPhase.Review ? 'Review' : 'Lottery';
+  }
 </script>
 
 <div class="space-y-6">
@@ -151,7 +160,7 @@
         Started {format(draft.activePeriodStart, 'PPP')} &middot; {getPhaseLabel(currentPhase)}
       </p>
     </div>
-    {#if currentPhase !== 'registration' && currentPhase !== 'registration-closed'}
+    {#if currentPhase !== DraftPhase.Registration && currentPhase !== DraftPhase.RegistrationClosed}
       <div class="flex flex-wrap gap-2 *:w-full min-[24rem]:*:w-min">
         <Button
           href={resolve(`/dashboard/drafts/${draftId}/students.csv`)}
@@ -187,7 +196,7 @@
   <!-- Timeline (reverse chronological: newest at top) -->
   <div class="pl-1">
     <!-- Summary (visible in review and finalized phases) -->
-    {#if currentPhase === 'review' || currentPhase === 'finalized'}
+    {#if currentPhase === DraftPhase.Review || currentPhase === DraftPhase.Finalized}
       <Step title="Summary" status="active" collapsible={false}>
         {#snippet metadata()}
           {#if draft.activePeriodEnd !== null}
@@ -203,29 +212,50 @@
           totalStudents={studentCount}
           {assignmentSummary}
           {draftSummaryChartData}
-          isReview={currentPhase === 'review'}
+          isReview={currentPhase === DraftPhase.Review}
         />
       </Step>
     {/if}
 
-    <!-- Lottery -->
-    {#if currentPhase === 'intervention' || currentPhase === 'review' || currentPhase === 'finalized'}
+    <!-- Lottery: post-intervention only (review + finalized) -->
+    {#if currentPhase === DraftPhase.Review || currentPhase === DraftPhase.Finalized}
       <Step
-        title={lotteryStepTitle}
-        status={lotteryStatus}
-        open={currentPhase === 'intervention' || currentPhase === 'review'}
+        title={lotteryStepTitleFor(currentPhase)}
+        status={lotteryStatusFor(currentPhase)}
+        open={currentPhase === DraftPhase.Review}
       >
-        {#if currentPhase === 'intervention'}
-          <LotteryActive {draftId} {labs} {snapshots} />
-        {:else}
-          <LotteryCompleted {draftId} isReview={currentPhase === 'review'} />
-        {/if}
+        <LotteryCompleted
+          {draftId}
+          isReview={currentPhase === DraftPhase.Review}
+          {lotteryAggregate}
+        />
+      </Step>
+    {/if}
+
+    <!-- Interventions: active during intervention phase, historical after -->
+    {#if currentPhase === DraftPhase.Intervention || currentPhase === DraftPhase.Review || currentPhase === DraftPhase.Finalized}
+      <Step
+        title="Interventions"
+        status={interventionsStatusFor(currentPhase)}
+        open={currentPhase === DraftPhase.Intervention}
+      >
+        <InterventionsActive
+          {draftId}
+          {labs}
+          {snapshots}
+          {interventionsAggregate}
+          isHistorical={currentPhase !== DraftPhase.Intervention}
+        />
       </Step>
     {/if}
 
     <!-- Regular Rounds -->
-    {#if currentPhase !== 'registration' && currentPhase !== 'registration-closed'}
-      <Step title="Regular Rounds" status={regularStatus} open={currentPhase === 'regular'}>
+    {#if currentPhase !== DraftPhase.Registration && currentPhase !== DraftPhase.RegistrationClosed}
+      <Step
+        title="Regular Rounds"
+        status={regularStatus}
+        open={currentPhase === DraftPhase.Regular}
+      >
         {#snippet metadata()}
           <span class="text-sm text-muted-foreground">
             {draft.currRound === null
@@ -242,7 +272,7 @@
             {assignmentSummary}
             showUndrafted
           />
-        {:else if currentPhase === 'review' || currentPhase === 'finalized'}
+        {:else if currentPhase === DraftPhase.Review || currentPhase === DraftPhase.Finalized}
           <RegularPhase
             {draftId}
             {requestedAt}
@@ -263,15 +293,16 @@
     <Step
       title="Registration"
       status={registrationStatus}
-      open={currentPhase === 'registration' || currentPhase === 'registration-closed'}
+      open={currentPhase === DraftPhase.Registration ||
+        currentPhase === DraftPhase.RegistrationClosed}
       last
     >
       {#snippet metadata()}
         <span class="text-sm text-muted-foreground">{studentCount} students</span>
       {/snippet}
-      {#if currentPhase === 'registration'}
+      {#if currentPhase === DraftPhase.Registration}
         <RegistrationActive {draftId} {studentCount} {snapshots} />
-      {:else if currentPhase === 'registration-closed'}
+      {:else if currentPhase === DraftPhase.RegistrationClosed}
         <RegistrationClosed {draftId} {studentCount} {allowlistCount} {snapshots} />
       {:else}
         <RegistrationCompleted
